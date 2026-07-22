@@ -108,7 +108,7 @@ export default function EditorField({
           onChange={handleChange}
           placeholder={`Enter ${categoryLabel.toLowerCase()} details…`}
           className={`
-            w-full flex-1 min-h-[38vh] p-4 text-base leading-relaxed
+            w-full flex-1 min-h-[75vh] p-4 text-base leading-relaxed
             bg-gray-50/70 border border-gray-200 rounded-xl
             focus:outline-none focus:ring-2 focus:ring-brand-500/60 focus:border-brand-300 focus:bg-white
             resize-none transition-all duration-200
