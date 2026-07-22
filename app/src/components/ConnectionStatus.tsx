@@ -52,11 +52,11 @@ export default function ConnectionStatus({ connected, awareness }: ConnectionSta
           className={`inline-block w-2 h-2 rounded-full ${
             connected
               ? "bg-green-500 animate-pulse"
-              : "bg-red-500"
+              : "bg-gray-300"
           }`}
         />
-        <span className="text-gray-500">
-          {connected ? "Live" : "Reconnecting…"}
+        <span className={connected ? "text-gray-500" : "text-gray-400"}>
+          {connected ? "Live" : "Connecting…"}
         </span>
       </div>
 

@@ -76,18 +76,26 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen max-w-2xl mx-auto w-full bg-white shadow-sm">
+    <div className="flex flex-col min-h-screen max-w-2xl mx-auto w-full bg-[#f7f6f3]">
+      {/* Navy top band */}
+      <div className="h-1 bg-gradient-to-r from-brand-800 via-brand-700 to-brand-500" />
+
       {/* Header */}
-      <header className="px-4 py-4 border-b border-gray-100">
-        <h1 className="text-lg font-bold text-gray-900">📋 Duty Reporter</h1>
-        <p className="text-xs text-gray-500 mt-0.5">
-          {new Date().toLocaleDateString("en-GB", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-        </p>
+      <header className="px-4 pt-4 pb-3">
+        <h1 className="text-xl font-extrabold tracking-tight text-brand-800">
+          Duty Reporter
+        </h1>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="inline-block w-6 h-0.5 bg-gold rounded-full" />
+          <p className="text-xs text-gray-500">
+            {new Date().toLocaleDateString("en-GB", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </p>
+        </div>
       </header>
 
       {/* Category Tabs */}
@@ -96,17 +104,23 @@ export default function Home() {
         onSelect={setActiveCategory}
       />
 
-      {/* Editor */}
-      <EditorField
-        key={activeCategory}
-        categoryLabel={activeLabel}
-        ytext={session?.ytext ?? null}
-        awareness={session?.awareness ?? null}
-        connected={session?.connected ?? false}
-      />
+      {/* Editor — card on warm-grey canvas, fade-in on tab switch */}
+      <main className="flex-1 px-3 py-3">
+        <div
+          key={activeCategory}
+          className="h-full bg-white rounded-2xl shadow-[0_1px_3px_rgba(15,28,44,0.08)] border border-gray-100 animate-fade-slide overflow-hidden"
+        >
+          <EditorField
+            categoryLabel={activeLabel}
+            ytext={session?.ytext ?? null}
+            awareness={session?.awareness ?? null}
+            connected={session?.connected ?? false}
+          />
+        </div>
+      </main>
 
       {/* Footer */}
-      <footer className="mt-auto px-4 py-3 border-t border-gray-100 text-center text-xs text-gray-400">
+      <footer className="mt-auto px-4 py-3 text-center text-[11px] text-gray-400">
         Duty Reporter v1.0 · Changes sync in real-time across all devices
       </footer>
     </div>

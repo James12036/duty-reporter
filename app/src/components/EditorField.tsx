@@ -101,27 +101,41 @@ export default function EditorField({
       )}
 
       {/* Textarea */}
-      <div className="flex-1 px-4 py-3">
+      <div className="flex-1 px-4 py-3 flex flex-col">
         <textarea
           ref={textareaRef}
           value={localText}
           onChange={handleChange}
           placeholder={`Enter ${categoryLabel.toLowerCase()} details…`}
           className={`
-            w-full h-full min-h-[40vh] p-4 text-base leading-relaxed
-            bg-gray-50 border border-gray-200 rounded-xl
-            focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent
-            resize-none transition-shadow duration-200
+            w-full flex-1 min-h-[38vh] p-4 text-base leading-relaxed
+            bg-gray-50/70 border border-gray-200 rounded-xl
+            focus:outline-none focus:ring-2 focus:ring-brand-500/60 focus:border-brand-300 focus:bg-white
+            resize-none transition-all duration-200
             placeholder:text-gray-400
             ${!connected ? "opacity-60" : ""}
           `}
           aria-label={categoryLabel}
         />
 
-        {/* Word count */}
-        <div className="flex justify-between items-center mt-2 text-xs text-gray-400">
-          <span>~{wordCount} words</span>
-          <span>{connected ? "Changes sync in real-time" : "Reconnecting… changes saved locally"}</span>
+        {/* Word count + progress toward ~300 words */}
+        <div className="mt-2.5">
+          <div className="flex justify-between items-center text-xs text-gray-400 mb-1">
+            <span>
+              ~{wordCount} {wordCount === 1 ? "word" : "words"}
+            </span>
+            <span>
+              {connected ? "Changes sync in real-time" : "Reconnecting… changes saved locally"}
+            </span>
+          </div>
+          <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${
+                wordCount >= 300 ? "bg-green-500" : "bg-brand-400"
+              }`}
+              style={{ width: `${Math.min(100, (wordCount / 300) * 100)}%` }}
+            />
+          </div>
         </div>
       </div>
     </div>
