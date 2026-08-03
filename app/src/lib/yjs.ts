@@ -96,6 +96,100 @@ export function disconnectAll() {
   sessions.forEach((_, id) => disconnectCategory(id));
 }
 
+// ── Batch operations ──────────────────────────────────────────
+
+/** Clear all category texts. Connects to each room, waits for sync, clears, then disconnects. */
+export async function clearAllCategories(categoryIds: string[]): Promise<void> {
+  const providers: WebsocketProvider[] = [];
+
+  for (const id of categoryIds) {
+    const doc = new Y.Doc();
+    const provider = new WebsocketProvider(getWsUrl(), id, doc, {
+      connect: true,
+      maxBackoffTime: 5000,
+    });
+    providers.push(provider);
+
+    // Wait for the doc to sync with the server before clearing
+    await new Promise<void>((resolve) => {
+      if (provider.synced) { resolve(); return; }
+      provider.once("sync", () => resolve());
+    });
+
+    const ytext = doc.getText("content");
+    ytext.delete(0, ytext.length);
+  }
+
+  // Allow changes to propagate to all peers before disconnecting
+  await new Promise((r) => setTimeout(r, 600));
+
+  for (const p of providers) {
+    p.disconnect();
+    p.doc.destroy();
+  }
+}
+
+/** Collect content from all categories and return formatted text. */
+export function collectAllContent(categoryIds: string[]): Promise<string> {
+  return (async () => {
+    const providers: WebsocketProvider[] = [];
+    const texts: { id: string; text: string }[] = [];
+
+    for (const id of categoryIds) {
+      const doc = new Y.Doc();
+      const provider = new WebsocketProvider(getWsUrl(), id, doc, {
+        connect: true,
+        maxBackoffTime: 5000,
+      });
+      providers.push(provider);
+
+      // Wait for full sync with server before reading
+      await new Promise<void>((resolve) => {
+        if (provider.synced) { resolve(); return; }
+        provider.once("sync", () => resolve());
+      });
+
+      const text = doc.getText("content").toString().trim();
+      texts.push({ id, text });
+    }
+
+    // Disconnect all temporary connections
+    for (const p of providers) {
+      p.disconnect();
+      p.doc.destroy();
+    }
+
+    // Build formatted output
+    const lines: string[] = [];
+    const now = new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" });
+    lines.push(`Duty Reporter — ${now}`);
+    lines.push("=".repeat(40));
+    lines.push("");
+
+    for (const { id, text } of texts) {
+      lines.push(`[${id.toUpperCase()}]`);
+      lines.push(text || "(empty)");
+      lines.push("");
+    }
+
+    return lines.join("\n");
+  })();
+}
+
+/** Trigger a .txt download in the browser. */
+export function downloadAsFile(filename: string, content: string) {
+  if (typeof window === "undefined") return;
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // ── Helpers ──────────────────────────────────────────────────────
 
 function makeSession(e: SessionEntry): CategorySession {

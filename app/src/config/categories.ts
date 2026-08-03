@@ -43,4 +43,11 @@ export const CATEGORIES: Category[] = [
     color: "border-amber-500",
     active: "bg-amber-50 text-amber-700 border-amber-500",
   },
+  {
+    id: "others",
+    label: "Others",
+    icon: "📌",
+    color: "border-gray-500",
+    active: "bg-gray-50 text-gray-700 border-gray-500",
+  },
 ];

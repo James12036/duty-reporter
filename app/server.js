@@ -15,7 +15,7 @@ const dev = process.env.NODE_ENV !== "production";
 const PORT = process.env.PORT || 3000;
 
 // ── Pre-create rooms ──────────────────────────────────────────────
-const ROOMS = ["eos", "overlapping", "asgp", "mtr-patrol", "cnap-check"];
+const ROOMS = ["eos", "overlapping", "asgp", "mtr-patrol", "cnap-check", "others"];
 ROOMS.forEach((room) => {
   const doc = utils.getYDoc(room, true);
   doc.getText("content");
