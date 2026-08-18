@@ -3,7 +3,7 @@ services:
     name: duty-reporter
     runtime: node
     plan: free
-    buildCommand: cd app && npm install && npm run build
+    buildCommand: cd app && npm install --include=dev && npm run build
     startCommand: cd app && node server.js
     envVars:
       - key: NODE_ENV
