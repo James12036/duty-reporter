@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback } from "react";
 import CategoryTabs from "@/components/CategoryTabs";
 import EditorField from "@/components/EditorField";
+import PinGate from "@/components/PinGate";
 import { CATEGORIES } from "@/config/categories";
 import { connectCategory, disconnectCategory, disconnectAll, clearAllCategories, collectAllContent, downloadAsFile } from "@/lib/yjs";
 import type { WebsocketProvider } from "y-websocket";
@@ -22,6 +23,14 @@ interface CategorySession {
 }
 
 export default function Home() {
+  return (
+    <PinGate>
+      <DutyApp />
+    </PinGate>
+  );
+}
+
+function DutyApp() {
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].id);
   const [session, setSession] = useState<CategorySession | null>(null);
   const [mounted, setMounted] = useState(false);

@@ -10,6 +10,7 @@ const { parse } = require("url");
 const next = require("next");
 const WebSocket = require("ws");
 const utils = require("y-websocket/bin/utils");
+const auth = require("./auth");
 
 const dev = process.env.NODE_ENV !== "production";
 const PORT = process.env.PORT || 3000;
@@ -31,8 +32,9 @@ app.prepare().then(() => {
     // CORS
     res.setHeader("Access-Control-Allow-Origin", "*");
 
-    // Health check
     const parsedUrl = parse(req.url, true);
+
+    // Health check stays public (UptimeRobot)
     if (parsedUrl.pathname === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({
@@ -44,13 +46,25 @@ app.prepare().then(() => {
       return;
     }
 
-    // Let Next.js handle everything else
-    handle(req, res, parsedUrl);
+    // Access-code login / session check
+    auth.handleAuthRequest(req, res, parsedUrl.pathname).then((handled) => {
+      if (handled) return;
+      handle(req, res, parsedUrl);
+    }).catch(() => {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: false, error: "Server error." }));
+    });
   });
 
   // ── WebSocket on same HTTP server ──────────────────────────────
   const wss = new WebSocket.Server({ server });
-  wss.on("connection", (ws, req) => utils.setupWSConnection(ws, req));
+  wss.on("connection", (ws, req) => {
+    if (!auth.isAuthenticated(req)) {
+      ws.close(4401, "Unauthorized");
+      return;
+    }
+    utils.setupWSConnection(ws, req);
+  });
 
   server.listen(PORT, () => {
     console.log(`
