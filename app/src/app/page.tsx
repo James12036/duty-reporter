@@ -12,7 +12,7 @@ import CategoryTabs from "@/components/CategoryTabs";
 import EditorField from "@/components/EditorField";
 import PinGate from "@/components/PinGate";
 import DuckLogo from "@/components/DuckLogo";
-import { CATEGORIES, AC_REFRESH_ROOMS, AC_REFRESH_TEMPLATE } from "@/config/categories";
+import { CATEGORIES, AC_REFRESH_ROOMS, AC_REFRESH_TEMPLATE, D_REFRESH_ROOMS, D_REFRESH_TEMPLATE } from "@/config/categories";
 import { connectCategory, disconnectCategory, disconnectAll, clearAllCategories, collectAllContent, downloadAsFile, refreshForAC } from "@/lib/yjs";
 import type { WebsocketProvider } from "y-websocket";
 import type * as Y from "yjs";
@@ -106,6 +106,25 @@ function DutyApp() {
     }
   }, []);
 
+  // ── Refresh for D: clear all rooms, seed EOS only ────────────
+  const handleRefreshD = useCallback(async () => {
+    if (typeof window === "undefined") return;
+    const ok = window.confirm(
+      "Refresh for D?\n\nThis will clear ALL rooms, then fill EOS with the D template."
+    );
+    if (!ok) return;
+    setBusyRefresh(true);
+    try {
+      await refreshForAC(
+        CATEGORIES.map((c) => c.id),
+        [...D_REFRESH_ROOMS],
+        D_REFRESH_TEMPLATE
+      );
+    } finally {
+      setBusyRefresh(false);
+    }
+  }, []);
+
   // ── Download all content as .txt ──────────────────────────────
   const handleDownload = useCallback(async () => {
     const ids = CATEGORIES.map((c) => c.id);
@@ -164,6 +183,17 @@ function DutyApp() {
                        focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             Refresh for A-C
+          </button>
+          <button
+            onClick={handleRefreshD}
+            disabled={busyRefresh}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                       bg-amber-50 text-amber-800 border border-amber-200
+                       hover:bg-amber-100 active:scale-[0.97] transition-all
+                       disabled:opacity-50 disabled:active:scale-100
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+          >
+            Refresh for D
           </button>
           <button
             onClick={handleDownload}

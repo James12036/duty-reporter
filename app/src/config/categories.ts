@@ -82,3 +82,21 @@ SUP SO
 
 
 `;
+
+/** Rooms filled after "Refresh for D" */
+export const D_REFRESH_ROOMS = ["eos"] as const;
+
+/** Exact contents of Downloads/Refresh for D.txt */
+export const D_REFRESH_TEMPLATE = `D
+
+
+D2
+
+
+D7
+
+
+H3
+
+
+`;
