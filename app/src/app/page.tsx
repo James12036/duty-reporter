@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback } from "react";
 import CategoryTabs from "@/components/CategoryTabs";
 import EditorField from "@/components/EditorField";
 import PinGate from "@/components/PinGate";
+import DuckLogo from "@/components/DuckLogo";
 import { CATEGORIES } from "@/config/categories";
 import { connectCategory, disconnectCategory, disconnectAll, clearAllCategories, collectAllContent, downloadAsFile } from "@/lib/yjs";
 import type { WebsocketProvider } from "y-websocket";
@@ -110,19 +111,24 @@ function DutyApp() {
 
       {/* Header */}
       <header className="px-4 pt-4 pb-3">
-        <h1 className="text-xl font-extrabold tracking-tight text-brand-800">
-          Duty Reporter
-        </h1>
-        <div className="flex items-center gap-2 mt-1">
-          <span className="inline-block w-6 h-0.5 bg-gold rounded-full" />
-          <p className="text-xs text-gray-500">
-            {new Date().toLocaleDateString("en-GB", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
+        <div className="flex items-center gap-3">
+          <DuckLogo size={48} className="shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-xl font-extrabold tracking-tight text-brand-800">
+              Report Duck 1.0
+            </h1>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="inline-block w-6 h-0.5 bg-gold rounded-full" />
+              <p className="text-xs text-gray-500">
+                {new Date().toLocaleDateString("en-GB", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Action buttons */}
@@ -177,7 +183,7 @@ function DutyApp() {
 
       {/* Footer */}
       <footer className="mt-auto px-4 py-3 text-center text-[11px] text-gray-400">
-        Duty Reporter v1.0 · Changes sync in real-time across all devices
+        Report Duck 1.0 · Changes sync in real-time across all devices
       </footer>
     </div>
   );

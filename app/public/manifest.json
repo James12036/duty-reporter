@@ -1,6 +1,6 @@
 {
-  "name": "Duty Reporter",
-  "short_name": "DutyReporter",
+  "name": "Report Duck 1.0",
+  "short_name": "Report Duck",
   "description": "Daily duty result collection with real-time sync",
   "start_url": "/",
   "display": "standalone",

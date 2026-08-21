@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Duty Reporter",
+  title: "Report Duck 1.0",
   description: "Daily duty result collection with real-time sync",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Duty Reporter",
+    title: "Report Duck 1.0",
   },
 };
 

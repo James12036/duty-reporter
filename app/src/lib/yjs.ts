@@ -162,7 +162,7 @@ export function collectAllContent(categoryIds: string[]): Promise<string> {
     // Build formatted output
     const lines: string[] = [];
     const now = new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" });
-    lines.push(`Duty Reporter — ${now}`);
+    lines.push(`Report Duck 1.0 — ${now}`);
     lines.push("=".repeat(40));
     lines.push("");
 
