@@ -12,8 +12,8 @@ import CategoryTabs from "@/components/CategoryTabs";
 import EditorField from "@/components/EditorField";
 import PinGate from "@/components/PinGate";
 import DuckLogo from "@/components/DuckLogo";
-import { CATEGORIES } from "@/config/categories";
-import { connectCategory, disconnectCategory, disconnectAll, clearAllCategories, collectAllContent, downloadAsFile } from "@/lib/yjs";
+import { CATEGORIES, AC_REFRESH_ROOMS, AC_REFRESH_TEMPLATE } from "@/config/categories";
+import { connectCategory, disconnectCategory, disconnectAll, clearAllCategories, collectAllContent, downloadAsFile, refreshForAC } from "@/lib/yjs";
 import type { WebsocketProvider } from "y-websocket";
 import type * as Y from "yjs";
 
@@ -35,6 +35,8 @@ function DutyApp() {
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].id);
   const [session, setSession] = useState<CategorySession | null>(null);
   const [mounted, setMounted] = useState(false);
+
+  const [busyRefresh, setBusyRefresh] = useState(false);
 
   // ── Hydration guard (Next.js SSR) ────────────────────────────
   useEffect(() => {
@@ -85,6 +87,25 @@ function DutyApp() {
     clearAllCategories(ids);
   }, []);
 
+  // ── Refresh for A-C: clear all rooms, seed EOS + Overlapping ─
+  const handleRefreshAC = useCallback(async () => {
+    if (typeof window === "undefined") return;
+    const ok = window.confirm(
+      "Refresh for A-C?\n\nThis will clear ALL rooms, then fill EOS and Overlapping with the A-C template."
+    );
+    if (!ok) return;
+    setBusyRefresh(true);
+    try {
+      await refreshForAC(
+        CATEGORIES.map((c) => c.id),
+        [...AC_REFRESH_ROOMS],
+        AC_REFRESH_TEMPLATE
+      );
+    } finally {
+      setBusyRefresh(false);
+    }
+  }, []);
+
   // ── Download all content as .txt ──────────────────────────────
   const handleDownload = useCallback(async () => {
     const ids = CATEGORIES.map((c) => c.id);
@@ -132,7 +153,18 @@ function DutyApp() {
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-2 mt-3">
+        <div className="flex items-center gap-2 mt-3 flex-wrap">
+          <button
+            onClick={handleRefreshAC}
+            disabled={busyRefresh}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                       bg-emerald-50 text-emerald-800 border border-emerald-200
+                       hover:bg-emerald-100 active:scale-[0.97] transition-all
+                       disabled:opacity-50 disabled:active:scale-100
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+          >
+            Refresh for A-C
+          </button>
           <button
             onClick={handleDownload}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium

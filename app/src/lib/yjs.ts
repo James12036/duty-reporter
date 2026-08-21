@@ -129,6 +129,46 @@ export async function clearAllCategories(categoryIds: string[]): Promise<void> {
   }
 }
 
+/**
+ * Clear every room, then write `template` into the seed rooms (EOS + Overlapping).
+ * Independent providers per room; wait for sync before mutating.
+ */
+export async function refreshForAC(
+  categoryIds: string[],
+  seedIds: string[],
+  template: string
+): Promise<void> {
+  const providers: WebsocketProvider[] = [];
+  const seed = new Set(seedIds);
+
+  for (const id of categoryIds) {
+    const doc = new Y.Doc();
+    const provider = new WebsocketProvider(getWsUrl(), id, doc, {
+      connect: true,
+      maxBackoffTime: 5000,
+    });
+    providers.push(provider);
+
+    await new Promise<void>((resolve) => {
+      if (provider.synced) { resolve(); return; }
+      provider.once("sync", () => resolve());
+    });
+
+    const ytext = doc.getText("content");
+    ytext.delete(0, ytext.length);
+    if (seed.has(id) && template) {
+      ytext.insert(0, template);
+    }
+  }
+
+  await new Promise((r) => setTimeout(r, 600));
+
+  for (const p of providers) {
+    p.disconnect();
+    p.doc.destroy();
+  }
+}
+
 /** Collect content from all categories and return formatted text. */
 export function collectAllContent(categoryIds: string[]): Promise<string> {
   return (async () => {

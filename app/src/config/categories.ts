@@ -51,3 +51,34 @@ export const CATEGORIES: Category[] = [
     active: "bg-gray-50 text-gray-700 border-gray-500",
   },
 ];
+
+/** Rooms filled after "Refresh for A-C" */
+export const AC_REFRESH_ROOMS = ["eos", "overlapping"] as const;
+
+/** Exact contents of Downloads/Refresh for A-C.txt */
+export const AC_REFRESH_TEMPLATE = `MP CW
+
+
+
+
+SUP CW
+
+
+
+
+MP SKW
+
+
+
+
+SUP SKW
+
+
+
+
+SUP SO
+
+
+
+
+`;
