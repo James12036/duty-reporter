@@ -93,7 +93,7 @@ export default function PinGate({ children }: { children: React.ReactNode }) {
             </label>
             <input
               id="access-code"
-              type="password"
+              type="text"
               inputMode="numeric"
               autoComplete="off"
               autoFocus
