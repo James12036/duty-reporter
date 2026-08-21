@@ -9,6 +9,7 @@ import { FormEvent, useEffect, useState } from "react";
 export default function PinGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<"checking" | "locked" | "open">("checking");
   const [pin, setPin] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -37,17 +38,19 @@ export default function PinGate({ children }: { children: React.ReactNode }) {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin }),
+        body: JSON.stringify({ pin, password }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.ok) {
         setStatus("open");
         setPin("");
+        setPassword("");
       } else if (res.status === 429) {
         setError(data.error || "Too many attempts. Try again later.");
       } else {
-        setError("Invalid access code.");
+        setError("Invalid access code or password.");
         setPin("");
+        setPassword("");
       }
     } catch {
       setError("Network error. Try again.");
@@ -78,7 +81,7 @@ export default function PinGate({ children }: { children: React.ReactNode }) {
             </h1>
             <div className="flex items-center gap-2 mt-1 mb-5">
               <span className="inline-block w-6 h-0.5 bg-gold rounded-full" />
-              <p className="text-xs text-gray-500">Enter access code</p>
+              <p className="text-xs text-gray-500">Enter access code and password</p>
             </div>
 
             <label htmlFor="access-code" className="sr-only">
@@ -97,13 +100,27 @@ export default function PinGate({ children }: { children: React.ReactNode }) {
                          focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
             />
 
+            <label htmlFor="access-password" className="sr-only">
+              Password
+            </label>
+            <input
+              id="access-password"
+              type="password"
+              autoComplete="off"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="mt-3 w-full px-4 py-3 rounded-xl border border-gray-200 text-base
+                         focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+            />
+
             {error ? (
               <p className="mt-2 text-sm text-red-600">{error}</p>
             ) : null}
 
             <button
               type="submit"
-              disabled={busy || pin.length < 4}
+              disabled={busy || pin.length < 4 || password.length < 1}
               className="mt-4 w-full py-3 rounded-xl text-sm font-semibold text-white
                          bg-brand-700 hover:bg-brand-800 active:scale-[0.98] transition-all
                          disabled:opacity-50 disabled:active:scale-100

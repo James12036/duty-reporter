@@ -51,9 +51,12 @@ const PINS = new Set([
   "8636",
 ]);
 
+const PASSWORD = process.env.AUTH_PASSWORD || "psu1cwdiv";
+
 const COOKIE_NAME = "duty_auth";
 const MAX_AGE = 60 * 60 * 24 * 400; // ~13 months — no idle timeout
-const SECRET = process.env.AUTH_SECRET || "duty-reporter-session-v1";
+const SECRET = process.env.AUTH_SECRET || "duty-reporter-session-v2";
+const TOKEN_VERSION = "v2";
 
 const loginAttempts = new Map();
 
@@ -82,9 +85,15 @@ function isValidPin(raw) {
   return false;
 }
 
+function isValidPassword(raw) {
+  const password = String(raw || "");
+  if (!password) return false;
+  return timingSafeEqualStr(password, PASSWORD);
+}
+
 function signToken() {
-  const sig = crypto.createHmac("sha256", SECRET).update("v1").digest("hex");
-  return `v1.${sig}`;
+  const sig = crypto.createHmac("sha256", SECRET).update(TOKEN_VERSION).digest("hex");
+  return `${TOKEN_VERSION}.${sig}`;
 }
 
 function isValidToken(token) {
@@ -205,8 +214,8 @@ async function handleAuthRequest(req, res, pathname) {
       return true;
     }
 
-    if (!isValidPin(body && body.pin)) {
-      sendJson(res, 401, { ok: false, error: "Invalid access code." });
+    if (!isValidPin(body && body.pin) || !isValidPassword(body && body.password)) {
+      sendJson(res, 401, { ok: false, error: "Invalid access code or password." });
       return true;
     }
 
