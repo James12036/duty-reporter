@@ -172,11 +172,11 @@ function DutyApp() {
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-2 mt-3 flex-wrap">
+        <div className="flex items-center gap-1 mt-3">
           <button
             onClick={handleRefreshAC}
             disabled={busyRefresh}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+            className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium whitespace-nowrap
                        bg-emerald-50 text-emerald-800 border border-emerald-200
                        hover:bg-emerald-100 active:scale-[0.97] transition-all
                        disabled:opacity-50 disabled:active:scale-100
@@ -187,7 +187,7 @@ function DutyApp() {
           <button
             onClick={handleRefreshD}
             disabled={busyRefresh}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+            className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium whitespace-nowrap
                        bg-amber-50 text-amber-800 border border-amber-200
                        hover:bg-amber-100 active:scale-[0.97] transition-all
                        disabled:opacity-50 disabled:active:scale-100
@@ -197,26 +197,20 @@ function DutyApp() {
           </button>
           <button
             onClick={handleClearAll}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+            className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium whitespace-nowrap
                        bg-red-50 text-red-600 border border-red-200
                        hover:bg-red-100 active:scale-[0.97] transition-all
                        focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
             Clear
           </button>
           <button
             onClick={handleDownload}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+            className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium whitespace-nowrap
                        bg-brand-50 text-brand-700 border border-brand-200
                        hover:bg-brand-100 active:scale-[0.97] transition-all
                        focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
             Download
           </button>
         </div>
