@@ -54,9 +54,9 @@ const PINS = new Set([
 const PASSWORD = process.env.AUTH_PASSWORD || "psu1cwdiv";
 
 const COOKIE_NAME = "duty_auth";
-const MAX_AGE = 60 * 60 * 24 * 400; // ~13 months — no idle timeout
-const SECRET = process.env.AUTH_SECRET || "duty-reporter-session-v2";
-const TOKEN_VERSION = "v2";
+const MAX_AGE = 60 * 60 * 24 * 30; // 30 days — no idle timeout
+const SECRET = process.env.AUTH_SECRET || "duty-reporter-session-v3";
+const TOKEN_VERSION = "v3";
 
 const loginAttempts = new Map();
 
@@ -92,13 +92,23 @@ function isValidPassword(raw) {
 }
 
 function signToken() {
-  const sig = crypto.createHmac("sha256", SECRET).update(TOKEN_VERSION).digest("hex");
-  return `${TOKEN_VERSION}.${sig}`;
+  const issued = String(Date.now());
+  const payload = `${TOKEN_VERSION}.${issued}`;
+  const sig = crypto.createHmac("sha256", SECRET).update(payload).digest("hex");
+  return `${payload}.${sig}`;
 }
 
 function isValidToken(token) {
   if (!token || typeof token !== "string") return false;
-  return timingSafeEqualStr(token, signToken());
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+  const [ver, issued, sig] = parts;
+  if (ver !== TOKEN_VERSION) return false;
+  const issuedAt = Number(issued);
+  if (!Number.isFinite(issuedAt)) return false;
+  if (Date.now() - issuedAt > MAX_AGE * 1000) return false;
+  const expected = crypto.createHmac("sha256", SECRET).update(`${ver}.${issued}`).digest("hex");
+  return timingSafeEqualStr(sig, expected);
 }
 
 function parseCookies(header) {
