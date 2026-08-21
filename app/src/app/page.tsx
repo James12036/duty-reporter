@@ -91,7 +91,7 @@ function DutyApp() {
   const handleRefreshAC = useCallback(async () => {
     if (typeof window === "undefined") return;
     const ok = window.confirm(
-      "Refresh for A-C?\n\nThis will clear ALL rooms, then fill EOS and Overlapping with the A-C template."
+      "Refresh (A-C)?\n\nThis will clear ALL rooms, then fill EOS and Overlapping with the A-C template."
     );
     if (!ok) return;
     setBusyRefresh(true);
@@ -110,7 +110,7 @@ function DutyApp() {
   const handleRefreshD = useCallback(async () => {
     if (typeof window === "undefined") return;
     const ok = window.confirm(
-      "Refresh for D?\n\nThis will clear ALL rooms, then fill EOS with the D template."
+      "Refresh (D)?\n\nThis will clear ALL rooms, then fill EOS with the D template."
     );
     if (!ok) return;
     setBusyRefresh(true);
@@ -182,7 +182,7 @@ function DutyApp() {
                        disabled:opacity-50 disabled:active:scale-100
                        focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
-            Refresh for A-C
+            Refresh (A-C)
           </button>
           <button
             onClick={handleRefreshD}
@@ -193,7 +193,7 @@ function DutyApp() {
                        disabled:opacity-50 disabled:active:scale-100
                        focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
           >
-            Refresh for D
+            Refresh (D)
           </button>
           <button
             onClick={handleClearAll}
