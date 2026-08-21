@@ -62,10 +62,6 @@ export default function DuckLogo({
         {/* head */}
         <circle cx="50" cy="46" r="28" fill={`url(#${uid}-body)`} />
 
-        {/* tiny gold bow on the crown */}
-        <path d="M44 20 L50 28 L56 20 L53 28 L56 34 L50 29 L44 34 L47 28 Z" fill="#d4a853" />
-        <circle cx="50" cy="28" r="3.2" fill="#b8902e" />
-
         {/* beak */}
         <ellipse cx="26" cy="54" rx="16" ry="9" fill={`url(#${uid}-beak)`} />
         <path d="M14 54h24" stroke="#C45E10" strokeWidth="1.5" strokeLinecap="round" opacity="0.75" />
@@ -78,10 +74,6 @@ export default function DuckLogo({
 
         {/* blush */}
         <ellipse cx="58" cy="58" rx="6" ry="3.4" fill="#C96B4A" opacity="0.35" />
-
-        {/* gold collar button */}
-        <rect x="54" y="72" width="18" height="6" rx="3" fill="#d4a853" />
-        <circle cx="63" cy="75" r="2.2" fill="#fff3cc" />
       </g>
     </svg>
   );
