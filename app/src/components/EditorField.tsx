@@ -20,6 +20,8 @@ interface EditorFieldProps {
   ytext: Y.Text | null;
   awareness: WebsocketProvider["awareness"] | null;
   connected: boolean;
+  /** Reference template shown below the textarea with a copy button */
+  template?: string | null;
 }
 
 export default function EditorField({
@@ -27,11 +29,14 @@ export default function EditorField({
   ytext,
   awareness,
   connected,
+  template = null,
 }: EditorFieldProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [localText, setLocalText] = useState("");
   const [remoteTyping, setRemoteTyping] = useState(false);
+  const [copied, setCopied] = useState(false);
   const remoteTypingTimer = useRef<ReturnType<typeof setTimeout>>();
+  const copiedTimer = useRef<ReturnType<typeof setTimeout>>();
 
   // ── Sync Y.Text → local state ───────────────────────────────────
   useEffect(() => {
@@ -77,10 +82,35 @@ export default function EditorField({
     [ytext]
   );
 
+  // ── Copy reference template to clipboard ───────────────────────
+  const handleCopyTemplate = useCallback(async () => {
+    if (!template) return;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(template);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = template;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopied(true);
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }, [template]);
+
   // ── Cleanup on unmount ──────────────────────────────────────────
   useEffect(() => {
     return () => {
       if (remoteTypingTimer.current) clearTimeout(remoteTypingTimer.current);
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
     };
   }, []);
 
@@ -137,6 +167,31 @@ export default function EditorField({
             />
           </div>
         </div>
+
+        {/* Reference template (EOS / Overlapping) */}
+        {template ? (
+          <div className="mt-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+                Reference template
+              </span>
+              <button
+                onClick={handleCopyTemplate}
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all active:scale-[0.97]
+                  ${
+                    copied
+                      ? "bg-green-50 text-green-700 border border-green-200"
+                      : "bg-brand-50 text-brand-700 border border-brand-200 hover:bg-brand-100"
+                  }`}
+              >
+                {copied ? "Copied ✓" : "Copy"}
+              </button>
+            </div>
+            <pre className="w-full text-[13px] leading-relaxed bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 text-gray-700 whitespace-pre-wrap font-sans">
+              {template}
+            </pre>
+          </div>
+        ) : null}
       </div>
     </div>
   );

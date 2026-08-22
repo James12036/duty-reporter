@@ -100,3 +100,11 @@ H3
 
 
 `;
+
+/** Exact contents of Downloads/底部模板.txt */
+export const BOTTOM_TEMPLATE = `60368
+1 SS, 1 SQ, 2 EP, 2 ID, 2 RL
+
+63112
+3 SQ, 2 EP, 3 ID, 2 SCH, 2 SF, 2 IN
+`;
