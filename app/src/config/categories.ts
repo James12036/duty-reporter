@@ -111,3 +111,6 @@ export const BOTTOM_TEMPLATE = `60368
 
 /** Exact contents of Downloads/ASGP 底部模版.txt */
 export const ASGP_TEMPLATE = `0800-0815 XXXX XXXX Estate`;
+
+/** Exact contents of Downloads/MTR 底部模版.txt */
+export const MTR_TEMPLATE = `0800-0815 XX Station 1 SS`;
