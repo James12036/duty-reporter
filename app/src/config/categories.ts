@@ -114,3 +114,6 @@ export const ASGP_TEMPLATE = `0800-0815 XXXX XXXX Estate`;
 
 /** Exact contents of Downloads/MTR 底部模版.txt */
 export const MTR_TEMPLATE = `0800-0815 XX Station 1 SS`;
+
+/** Exact contents of Downloads/Snap Check底部模版.txt */
+export const SNAP_TEMPLATE = `1 車 1 人`;
