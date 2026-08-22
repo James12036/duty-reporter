@@ -108,3 +108,6 @@ export const BOTTOM_TEMPLATE = `60368
 63112
 3 SQ, 2 EP, 3 ID, 2 SCH, 2 SF, 2 IN
 `;
+
+/** Exact contents of Downloads/ASGP 底部模版.txt */
+export const ASGP_TEMPLATE = `0800-0815 XXXX XXXX Estate`;

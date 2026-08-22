@@ -12,7 +12,7 @@ import CategoryTabs from "@/components/CategoryTabs";
 import EditorField from "@/components/EditorField";
 import PinGate from "@/components/PinGate";
 import DuckLogo from "@/components/DuckLogo";
-import { CATEGORIES, AC_REFRESH_ROOMS, AC_REFRESH_TEMPLATE, D_REFRESH_ROOMS, D_REFRESH_TEMPLATE, BOTTOM_TEMPLATE } from "@/config/categories";
+import { CATEGORIES, AC_REFRESH_ROOMS, AC_REFRESH_TEMPLATE, D_REFRESH_ROOMS, D_REFRESH_TEMPLATE, BOTTOM_TEMPLATE, ASGP_TEMPLATE } from "@/config/categories";
 import { connectCategory, disconnectCategory, disconnectAll, clearAllCategories, collectAllContent, downloadAsFile, refreshForAC } from "@/lib/yjs";
 import type { WebsocketProvider } from "y-websocket";
 import type * as Y from "yjs";
@@ -236,6 +236,8 @@ function DutyApp() {
             template={
               activeCategory === "eos" || activeCategory === "overlapping"
                 ? BOTTOM_TEMPLATE
+                : activeCategory === "asgp"
+                ? ASGP_TEMPLATE
                 : null
             }
           />
