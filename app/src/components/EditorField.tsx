@@ -187,7 +187,7 @@ export default function EditorField({
                 {copied ? "Copied ✓" : "Copy"}
               </button>
             </div>
-            <pre className="w-full text-[13px] leading-relaxed bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 text-gray-700 whitespace-pre-wrap font-sans">
+            <pre className="w-full text-[13px] leading-relaxed bg-gray-200 border border-gray-300 rounded-xl px-3.5 py-3 text-gray-800 whitespace-pre-wrap font-sans">
               {template}
             </pre>
           </div>
