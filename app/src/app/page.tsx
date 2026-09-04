@@ -105,7 +105,9 @@ function DutyApp() {
     if (!ok) return;
     const ids = CATEGORIES.map((c) => c.id);
     await clearAllCategories(ids);
-    await writeRefreshTimestamp(String(Date.now()));
+    setLastRefreshAt(Date.now());
+    // Best-effort sync to the shared meta room (never blocks the UI)
+    writeRefreshTimestamp(String(Date.now())).catch(() => {});
   }, []);
 
   // ── Refresh for A-C: clear all rooms, seed EOS + Overlapping ─
@@ -122,7 +124,9 @@ function DutyApp() {
         [...AC_REFRESH_ROOMS],
         AC_REFRESH_TEMPLATE
       );
-      await writeRefreshTimestamp(String(Date.now()));
+      const ts = Date.now();
+      setLastRefreshAt(ts);
+      writeRefreshTimestamp(String(ts)).catch(() => {});
     } finally {
       setBusyRefresh(false);
     }
@@ -142,7 +146,9 @@ function DutyApp() {
         [...D_REFRESH_ROOMS],
         D_REFRESH_TEMPLATE
       );
-      await writeRefreshTimestamp(String(Date.now()));
+      const ts = Date.now();
+      setLastRefreshAt(ts);
+      writeRefreshTimestamp(String(ts)).catch(() => {});
     } finally {
       setBusyRefresh(false);
     }

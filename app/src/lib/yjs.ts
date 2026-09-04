@@ -127,17 +127,15 @@ export async function writeRefreshTimestamp(ts: string): Promise<void> {
     maxBackoffTime: 5000,
   });
 
-  await new Promise<void>((resolve) => {
-    if (provider.synced) { resolve(); return; }
-    provider.once("sync", () => resolve());
-  });
+  // Wait for sync with a timeout so this can never hang forever
+  await waitForSync(provider, 10000);
 
   const ytext = doc.getText("refreshAt");
   ytext.delete(0, ytext.length);
   ytext.insert(0, ts);
 
   // Allow the change to propagate before disconnecting
-  await new Promise((r) => setTimeout(r, 600));
+  await new Promise((r) => setTimeout(r, 1200));
 
   provider.disconnect();
   doc.destroy();
@@ -161,6 +159,18 @@ function makeMetaSession(e: SessionEntry): CategorySession {
 
 // ── Batch operations ──────────────────────────────────────────
 
+/** Resolve once the provider has synced, or give up after ms. */
+function waitForSync(provider: WebsocketProvider, ms = 8000): Promise<void> {
+  return new Promise<void>((resolve) => {
+    if (provider.synced) { resolve(); return; }
+    const timer = setTimeout(() => resolve(), ms);
+    provider.once("sync", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+}
+
 /** Clear all category texts. Connects to each room, waits for sync, clears, then disconnects. */
 export async function clearAllCategories(categoryIds: string[]): Promise<void> {
   const providers: WebsocketProvider[] = [];
@@ -174,10 +184,7 @@ export async function clearAllCategories(categoryIds: string[]): Promise<void> {
     providers.push(provider);
 
     // Wait for the doc to sync with the server before clearing
-    await new Promise<void>((resolve) => {
-      if (provider.synced) { resolve(); return; }
-      provider.once("sync", () => resolve());
-    });
+    await waitForSync(provider);
 
     const ytext = doc.getText("content");
     ytext.delete(0, ytext.length);
@@ -212,10 +219,7 @@ export async function refreshForAC(
     });
     providers.push(provider);
 
-    await new Promise<void>((resolve) => {
-      if (provider.synced) { resolve(); return; }
-      provider.once("sync", () => resolve());
-    });
+    await waitForSync(provider);
 
     const ytext = doc.getText("content");
     ytext.delete(0, ytext.length);
