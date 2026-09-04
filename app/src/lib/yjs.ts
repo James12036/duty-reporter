@@ -96,6 +96,69 @@ export function disconnectAll() {
   sessions.forEach((_, id) => disconnectCategory(id));
 }
 
+// ── Shared "last refresh" timestamp (meta room) ────────────────
+
+const META_ROOM = "meta";
+
+/** Connect to the shared meta room (used for header refresh timestamp). */
+export function connectMeta(): CategorySession {
+  const existing = sessions.get(META_ROOM);
+  if (existing) {
+    return makeMetaSession(existing);
+  }
+
+  const doc = new Y.Doc();
+  const provider = new WebsocketProvider(getWsUrl(), META_ROOM, doc, {
+    connect: true,
+    maxBackoffTime: 10000,
+  });
+  provider.awareness.setLocalState(null);
+
+  const entry: SessionEntry = { doc, provider, awareness: provider.awareness };
+  sessions.set(META_ROOM, entry);
+  return makeMetaSession(entry);
+}
+
+/** Write the last-refresh timestamp into the meta room (sync-safe). */
+export async function writeRefreshTimestamp(ts: string): Promise<void> {
+  const doc = new Y.Doc();
+  const provider = new WebsocketProvider(getWsUrl(), META_ROOM, doc, {
+    connect: true,
+    maxBackoffTime: 5000,
+  });
+
+  await new Promise<void>((resolve) => {
+    if (provider.synced) { resolve(); return; }
+    provider.once("sync", () => resolve());
+  });
+
+  const ytext = doc.getText("refreshAt");
+  ytext.delete(0, ytext.length);
+  ytext.insert(0, ts);
+
+  // Allow the change to propagate before disconnecting
+  await new Promise((r) => setTimeout(r, 600));
+
+  provider.disconnect();
+  doc.destroy();
+}
+
+function makeMetaSession(e: SessionEntry): CategorySession {
+  const ytext = e.doc.getText("refreshAt") as Y.Text;
+  return {
+    ytext,
+    awareness: e.awareness,
+    connected: e.provider.wsconnected,
+    onStatus(cb: (connected: boolean) => void) {
+      const handler = ({ status }: { status: string }) =>
+        cb(status === "connected");
+      e.provider.on("status", handler);
+      cb(e.provider.wsconnected);
+      return () => e.provider.off("status", handler);
+    },
+  };
+}
+
 // ── Batch operations ──────────────────────────────────────────
 
 /** Clear all category texts. Connects to each room, waits for sync, clears, then disconnects. */

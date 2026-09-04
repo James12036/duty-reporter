@@ -13,7 +13,7 @@ import EditorField from "@/components/EditorField";
 import PinGate from "@/components/PinGate";
 import DuckLogo from "@/components/DuckLogo";
 import { CATEGORIES, AC_REFRESH_ROOMS, AC_REFRESH_TEMPLATE, D_REFRESH_ROOMS, D_REFRESH_TEMPLATE, BOTTOM_TEMPLATE, ASGP_TEMPLATE, MTR_TEMPLATE, SNAP_TEMPLATE } from "@/config/categories";
-import { connectCategory, disconnectCategory, disconnectAll, clearAllCategories, collectAllContent, downloadAsFile, refreshForAC } from "@/lib/yjs";
+import { connectCategory, disconnectCategory, disconnectAll, clearAllCategories, collectAllContent, downloadAsFile, refreshForAC, connectMeta, writeRefreshTimestamp } from "@/lib/yjs";
 import type { WebsocketProvider } from "y-websocket";
 import type * as Y from "yjs";
 
@@ -37,11 +37,31 @@ function DutyApp() {
   const [mounted, setMounted] = useState(false);
 
   const [busyRefresh, setBusyRefresh] = useState(false);
+  const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
 
   // ── Hydration guard (Next.js SSR) ────────────────────────────
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // ── Subscribe to shared last-refresh timestamp (meta room) ──
+  useEffect(() => {
+    if (!mounted) return;
+
+    const meta = connectMeta();
+
+    const onMetaText = () => {
+      const raw = meta.ytext.toString().trim();
+      const ts = raw ? Number(raw) : NaN;
+      setLastRefreshAt(Number.isFinite(ts) && ts > 0 ? ts : null);
+    };
+    onMetaText();
+    meta.ytext.observe(onMetaText);
+
+    return () => {
+      meta.ytext.unobserve(onMetaText);
+    };
+  }, [mounted]);
 
   // ── Connect to the active category room ──────────────────────
   useEffect(() => {
@@ -77,14 +97,15 @@ function DutyApp() {
   }, []);
 
   // ── Clear all categories (with confirmation) ─────────────────
-  const handleClearAll = useCallback(() => {
+  const handleClearAll = useCallback(async () => {
     if (typeof window === "undefined") return;
     const ok = window.confirm(
       "⚠️ Clear ALL fields?\n\nThis will erase every category's content for ALL officers. This action cannot be undone."
     );
     if (!ok) return;
     const ids = CATEGORIES.map((c) => c.id);
-    clearAllCategories(ids);
+    await clearAllCategories(ids);
+    await writeRefreshTimestamp(String(Date.now()));
   }, []);
 
   // ── Refresh for A-C: clear all rooms, seed EOS + Overlapping ─
@@ -101,6 +122,7 @@ function DutyApp() {
         [...AC_REFRESH_ROOMS],
         AC_REFRESH_TEMPLATE
       );
+      await writeRefreshTimestamp(String(Date.now()));
     } finally {
       setBusyRefresh(false);
     }
@@ -120,6 +142,7 @@ function DutyApp() {
         [...D_REFRESH_ROOMS],
         D_REFRESH_TEMPLATE
       );
+      await writeRefreshTimestamp(String(Date.now()));
     } finally {
       setBusyRefresh(false);
     }
@@ -160,12 +183,15 @@ function DutyApp() {
             <div className="flex items-center gap-2 mt-1">
               <span className="inline-block w-6 h-0.5 bg-gold rounded-full" />
               <p className="text-xs text-gray-500">
-                {new Date().toLocaleDateString("en-GB", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
+                {lastRefreshAt
+                  ? `Last refresh: ${new Date(lastRefreshAt).toLocaleString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}`
+                  : "Not refreshed yet"}
               </p>
             </div>
           </div>
