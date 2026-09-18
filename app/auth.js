@@ -50,6 +50,7 @@ const PINS = new Set([
   "62279",
   "8636",
   "61195",
+  "63413",
 ]);
 
 const PASSWORD = process.env.AUTH_PASSWORD || "psu1cwdiv";
