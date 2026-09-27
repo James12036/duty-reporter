@@ -1,5 +1,5 @@
 /**
- * Server-only access-code gate.
+ * Report Duck 2.0 — server-only access-code gate.
  * PINs never ship in the Next.js client bundle.
  */
 
@@ -55,10 +55,10 @@ const PINS = new Set([
 
 const PASSWORD = process.env.AUTH_PASSWORD || "psu1cwdiv";
 
-const COOKIE_NAME = "duty_auth";
+const COOKIE_NAME = "duck2_auth";
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days — no idle timeout
-const SECRET = process.env.AUTH_SECRET || "duty-reporter-session-v3";
-const TOKEN_VERSION = "v3";
+const SECRET = process.env.AUTH_SECRET || "report-duck-2-session-v1";
+const TOKEN_VERSION = "v1";
 
 const loginAttempts = new Map();
 

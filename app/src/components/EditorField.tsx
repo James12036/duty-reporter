@@ -1,151 +1,170 @@
 "use client";
 
 /**
- * EditorField — Yjs-synced textarea for a category.
+ * EditorField — Yjs-synced textarea for a room.
  *
  * Key behaviors:
- *  - Uses a Y.Text as the source of truth (CRDT, no overwrites)
- *  - Shows "remote activity" indicator when another user is typing
- *  - Full-height textarea suitable for ~300 words
- *  - Auto-scrolls to bottom on new remote changes if user is at bottom
+ *  - The Y.Text is the source of truth (CRDT, no overwrites).
+ *  - The textarea is UNCONTROLLED; a diff-based TextareaBinding syncs it, so
+ *    remote typing never resets the local scroll position or caret
+ *    (fixes the Report Duck 1.0 "jumps to the top" problem).
+ *  - Status row has a fixed height and the remote-typing hint fades in/out via
+ *    opacity — no layout shifts while someone else is typing.
+ *  - Full-height textarea suitable for ~300 words.
  */
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import * as Y from "yjs";
+import { useEffect, useRef, useState } from "react";
+import type * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
-import ConnectionStatus from "./ConnectionStatus";
+import { TextareaBinding } from "@/lib/textarea-binding";
 
 interface EditorFieldProps {
-  categoryLabel: string;
+  roomName: string;
   ytext: Y.Text | null;
   awareness: WebsocketProvider["awareness"] | null;
   connected: boolean;
-  /** Reference template shown below the textarea with a copy button */
-  template?: string | null;
+}
+
+interface RemoteUser {
+  clientId: number;
+  name: string;
+  color: string;
+}
+
+function computeWords(value: string): number {
+  return value ? value.trim().split(/\s+/).filter(Boolean).length : 0;
 }
 
 export default function EditorField({
-  categoryLabel,
+  roomName,
   ytext,
   awareness,
   connected,
-  template = null,
 }: EditorFieldProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [localText, setLocalText] = useState("");
-  const [remoteTyping, setRemoteTyping] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const remoteTypingTimer = useRef<ReturnType<typeof setTimeout>>();
-  const copiedTimer = useRef<ReturnType<typeof setTimeout>>();
+  const [wordCount, setWordCount] = useState(0);
+  const [remoteActivity, setRemoteActivity] = useState(false);
+  const [remoteUsers, setRemoteUsers] = useState<RemoteUser[]>([]);
+  const activityTimer = useRef<ReturnType<typeof setTimeout>>();
 
-  // ── Sync Y.Text → local state ───────────────────────────────────
+  // ── Bind the textarea to the Y.Text (diff-based, scroll/caret safe) ──
   useEffect(() => {
+    const elt = textareaRef.current;
+    if (!elt) return;
+
     if (!ytext) {
-      setLocalText("");
+      elt.value = "";
+      setWordCount(0);
       return;
     }
 
-    const handleUpdate = () => {
-      const text = ytext.toString();
-      setLocalText(text);
+    const binding = new TextareaBinding(ytext, elt, {
+      onLocalChange: (value) => setWordCount(computeWords(value)),
+      onRemoteChange: (value) => {
+        setWordCount(computeWords(value));
+        setRemoteActivity(true);
+        if (activityTimer.current) clearTimeout(activityTimer.current);
+        activityTimer.current = setTimeout(() => setRemoteActivity(false), 1200);
+      },
+    });
+    setWordCount(computeWords(elt.value));
 
-      // Flash indicator that someone else changed the text
-      // (only if the change didn't come from our own typing)
-      if (document.activeElement !== textareaRef.current) {
-        setRemoteTyping(true);
-        if (remoteTypingTimer.current) clearTimeout(remoteTypingTimer.current);
-        remoteTypingTimer.current = setTimeout(() => setRemoteTyping(false), 1200);
-      }
-    };
-
-    // Initial sync
-    handleUpdate();
-
-    ytext.observe(handleUpdate);
     return () => {
-      ytext.unobserve(handleUpdate);
+      binding.destroy();
     };
   }, [ytext]);
 
-  // ── Local typing → Y.Text ───────────────────────────────────────
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const newValue = e.target.value;
-      setLocalText(newValue);
-
-      if (ytext) {
-        // CRDT merge: replace the entire text (Yjs handles conflicts)
-        ytext.delete(0, ytext.length);
-        ytext.insert(0, newValue);
-      }
-    },
-    [ytext]
-  );
-
-  // ── Copy reference template to clipboard ───────────────────────
-  const handleCopyTemplate = useCallback(async () => {
-    if (!template) return;
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(template);
-      } else {
-        const ta = document.createElement("textarea");
-        ta.value = template;
-        ta.style.position = "fixed";
-        ta.style.opacity = "0";
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-      }
-      setCopied(true);
-      if (copiedTimer.current) clearTimeout(copiedTimer.current);
-      copiedTimer.current = setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
+  // ── Presence: who else is viewing this room ─────────────────────
+  useEffect(() => {
+    if (!awareness) {
+      setRemoteUsers([]);
+      return;
     }
-  }, [template]);
+    const updateUsers = () => {
+      const users: RemoteUser[] = [];
+      awareness.getStates().forEach((state, clientId) => {
+        if (clientId === awareness.clientID) return; // skip local user
+        if (state && state.name) {
+          users.push({ clientId, name: state.name, color: state.color || "#6366f1" });
+        }
+      });
+      setRemoteUsers(users);
+    };
+    awareness.on("change", updateUsers);
+    updateUsers();
+    return () => {
+      awareness.off("change", updateUsers);
+    };
+  }, [awareness]);
 
-  // ── Cleanup on unmount ──────────────────────────────────────────
+  // ── Cleanup timers on unmount ───────────────────────────────────
   useEffect(() => {
     return () => {
-      if (remoteTypingTimer.current) clearTimeout(remoteTypingTimer.current);
-      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      if (activityTimer.current) clearTimeout(activityTimer.current);
     };
   }, []);
 
-  const wordCount = localText
-    ? localText.trim().split(/\s+/).filter(Boolean).length
-    : 0;
-
   return (
     <div className="flex flex-col h-full">
-      <ConnectionStatus connected={connected} awareness={awareness} />
-
-      {/* Remote activity indicator */}
-      {remoteTyping && (
-        <div className="mx-4 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 flex items-center gap-2 animate-pulse">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
-          Someone is updating this field…
+      {/* Status row — fixed height, never reflows the textarea */}
+      <div className="flex items-center gap-3 px-4 h-9 text-xs whitespace-nowrap overflow-hidden">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span
+            className={`inline-block w-2 h-2 rounded-full ${
+              connected ? "bg-green-500 animate-pulse" : "bg-gray-300"
+            }`}
+          />
+          <span className={connected ? "text-gray-500" : "text-gray-400"}>
+            {connected ? "Live" : "Connecting…"}
+          </span>
         </div>
-      )}
 
-      {/* Textarea */}
+        {remoteUsers.length > 0 && (
+          <div className="flex items-center gap-1 text-gray-500 min-w-0">
+            <span className="shrink-0">•</span>
+            <div className="flex -space-x-1 shrink-0">
+              {remoteUsers.slice(0, 3).map((u) => (
+                <span
+                  key={u.clientId}
+                  className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white ring-1 ring-white"
+                  style={{ backgroundColor: u.color }}
+                  title={u.name}
+                >
+                  {u.name[0]}
+                </span>
+              ))}
+            </div>
+            <span className="truncate">
+              {remoteUsers.length === 1 ? `${remoteUsers[0].name} is here` : `${remoteUsers.length} others here`}
+            </span>
+          </div>
+        )}
+
+        {/* Fades in/out via opacity — occupies the same space, so no jump */}
+        <span
+          className={`ml-auto shrink-0 flex items-center gap-1.5 text-amber-600 transition-opacity duration-300 ${
+            remoteActivity ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
+          Someone is updating…
+        </span>
+      </div>
+
+      {/* Textarea (uncontrolled — the binding owns its value) */}
       <div className="flex-1 px-4 py-3 flex flex-col">
         <textarea
           ref={textareaRef}
-          value={localText}
-          onChange={handleChange}
-          placeholder={`Enter ${categoryLabel.toLowerCase()} details…`}
+          placeholder={ytext ? `Enter details for ${roomName}…` : "Connecting…"}
+          aria-label={roomName}
           className={`
             w-full flex-1 min-h-[90vh] p-4 text-base leading-relaxed
             bg-gray-50/70 border border-gray-200 rounded-xl
             focus:outline-none focus:ring-2 focus:ring-brand-500/60 focus:border-brand-300 focus:bg-white
-            resize-none transition-all duration-200
+            resize-none transition-colors duration-200
             placeholder:text-gray-400
             ${!connected ? "opacity-60" : ""}
           `}
-          aria-label={categoryLabel}
         />
 
         {/* Word count + progress toward ~300 words */}
@@ -167,31 +186,6 @@ export default function EditorField({
             />
           </div>
         </div>
-
-        {/* Reference template (EOS / Overlapping) */}
-        {template ? (
-          <div className="mt-3">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-                Reference template
-              </span>
-              <button
-                onClick={handleCopyTemplate}
-                className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all active:scale-[0.97]
-                  ${
-                    copied
-                      ? "bg-green-50 text-green-700 border border-green-200"
-                      : "bg-brand-50 text-brand-700 border border-brand-200 hover:bg-brand-100"
-                  }`}
-              >
-                {copied ? "Copied ✓" : "Copy"}
-              </button>
-            </div>
-            <pre className="w-full text-[13px] leading-relaxed bg-gray-600 border border-gray-700 rounded-xl px-3.5 py-3 text-gray-100 whitespace-pre-wrap font-sans">
-              {template}
-            </pre>
-          </div>
-        ) : null}
       </div>
     </div>
   );

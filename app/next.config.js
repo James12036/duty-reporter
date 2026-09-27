@@ -12,7 +12,7 @@ const nextConfig = {
 
   // Environment variables exposed to the browser
   env: {
-    NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:1234",
+    NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3002",
   },
 };
 

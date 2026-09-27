@@ -1,5 +1,5 @@
 /**
- * Duty Reporter — Unified Server
+ * Report Duck 2.0 — Unified Server
  *
  * Runs both the Next.js frontend and y-websocket sync server on one port.
  * Deploy to Render, Railway, or Fly.io as a single service.
@@ -15,11 +15,15 @@ const auth = require("./auth");
 const dev = process.env.NODE_ENV !== "production";
 const PORT = process.env.PORT || 3000;
 
-// ── Pre-create rooms ──────────────────────────────────────────────
-const ROOMS = ["eos", "overlapping", "asgp", "mtr-patrol", "cnap-check", "others"];
+// ── Pre-create rooms (7 report rooms + shared meta room) ─────────
+const ROOMS = ["room-1", "room-2", "room-3", "room-4", "room-5", "room-6", "room-7", "meta"];
 ROOMS.forEach((room) => {
   const doc = utils.getYDoc(room, true);
   doc.getText("content");
+  if (room === "meta") {
+    doc.getText("refreshAt");
+    doc.getMap("roomnames");
+  }
   console.log(`  Room ready: ${room}`);
 });
 
@@ -69,9 +73,9 @@ app.prepare().then(() => {
   server.listen(PORT, () => {
     console.log(`
 ╔══════════════════════════════════════════════╗
-║   Duty Reporter — Ready                     ║
+║   Report Duck 2.0 — Ready                   ║
 ║   http://localhost:${PORT}                       ║
-║   ${ROOMS.length} rooms active                          ║
+║   7 rooms + meta active                     ║
 ╚══════════════════════════════════════════════╝
 `);
   });

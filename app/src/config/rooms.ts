@@ -1,0 +1,70 @@
+/**
+ * Report Duck 2.0 — rooms & shift presets.
+ *
+ * 7 rooms, each backed by its own Yjs room ("room-1" … "room-7").
+ * Room NAMES are shared state (stored in the meta room's "roomnames" map),
+ * so anyone can rename a room by hand and every officer sees the new name.
+ */
+
+export interface RoomConfig {
+  id: string;
+  /** Shown until someone refreshes / renames (or on a fresh server) */
+  defaultName: string;
+  /** Active tab styling: soft tinted background + matching text colour */
+  active: string;
+}
+
+export const ROOMS: RoomConfig[] = [
+  { id: "room-1", defaultName: "Room 1", active: "bg-red-50 text-red-700 border-red-500" },
+  { id: "room-2", defaultName: "Room 2", active: "bg-blue-50 text-blue-700 border-blue-500" },
+  { id: "room-3", defaultName: "Room 3", active: "bg-green-50 text-green-700 border-green-500" },
+  { id: "room-4", defaultName: "Room 4", active: "bg-purple-50 text-purple-700 border-purple-500" },
+  { id: "room-5", defaultName: "Room 5", active: "bg-amber-50 text-amber-700 border-amber-500" },
+  { id: "room-6", defaultName: "Room 6", active: "bg-gray-50 text-gray-700 border-gray-500" },
+  { id: "room-7", defaultName: "Room 7", active: "bg-teal-50 text-teal-700 border-teal-500" },
+];
+
+export const ROOM_IDS = ROOMS.map((r) => r.id);
+
+export const DEFAULT_ROOM_NAMES = ROOMS.map((r) => r.defaultName);
+
+/** Room names applied by "Refresh (A-C)" */
+export const AC_ROOM_NAMES = [
+  "MP CW",
+  "SUP CW",
+  "MP SKW",
+  "SUP SKW",
+  "SUP SO",
+  "Other 1",
+  "Other 2",
+];
+
+/** Room names applied by "Refresh (D)" */
+export const D_ROOM_NAMES = ["D", "D2", "D7", "H3", "Other 1", "Other 2", "Other 3"];
+
+/** Rooms that "Refresh (A-C)" fills with the A-C template (the first 5 rooms) */
+export const AC_SEED_ROOM_IDS = ["room-1", "room-2", "room-3", "room-4", "room-5"];
+
+/**
+ * Content written into the first 5 rooms by "Refresh (A-C)"
+ * (exact contents of Desktop/A-C.rtf).
+ */
+export const AC_SEED_CONTENT = `EOS:
+
+
+
+
+
+
+
+————————————
+Overlapping:
+
+
+
+
+
+————————————
+Others:`;
+
+

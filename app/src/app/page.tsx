@@ -1,27 +1,42 @@
 "use client";
 
 /**
- * Duty Reporter — Main Page
+ * Report Duck 2.0 — Main Page
  *
- * Renders the category tabs and the collaborative editor for the active category.
- * Each category gets its own Yjs room for independent real-time sync.
+ * - 7 shared rooms ("room-1" … "room-7"), each its own Yjs room.
+ * - Room names are editable by hand (✏️ Rename) and shared with everyone.
+ * - Refresh (A-C) / Refresh (D) clear all rooms and rename them to the
+ *   shift's preset names.
  */
 
-import { useState, useEffect, useCallback } from "react";
-import CategoryTabs from "@/components/CategoryTabs";
+import { useCallback, useEffect, useState } from "react";
+import RoomTabs from "@/components/RoomTabs";
 import EditorField from "@/components/EditorField";
+import RoomNameBar from "@/components/RoomNameBar";
 import PinGate from "@/components/PinGate";
 import DuckLogo from "@/components/DuckLogo";
-import { CATEGORIES, AC_REFRESH_ROOMS, AC_REFRESH_TEMPLATE, D_REFRESH_ROOMS, D_REFRESH_TEMPLATE, BOTTOM_TEMPLATE, ASGP_TEMPLATE, MTR_TEMPLATE, SNAP_TEMPLATE } from "@/config/categories";
-import { connectCategory, disconnectCategory, disconnectAll, clearAllCategories, collectAllContent, downloadAsFile, refreshForAC, connectMeta, writeRefreshTimestamp } from "@/lib/yjs";
-import type { WebsocketProvider } from "y-websocket";
-import type * as Y from "yjs";
-
-interface CategorySession {
-  ytext: Y.Text;
-  awareness: WebsocketProvider["awareness"];
-  connected: boolean;
-}
+import {
+  ROOMS,
+  ROOM_IDS,
+  DEFAULT_ROOM_NAMES,
+  AC_ROOM_NAMES,
+  AC_SEED_CONTENT,
+  AC_SEED_ROOM_IDS,
+  D_ROOM_NAMES,
+} from "@/config/rooms";
+import {
+  connectRoom,
+  disconnectRoom,
+  disconnectAll,
+  clearRoomsContent,
+  refreshRooms,
+  collectAllContent,
+  downloadAsFile,
+  connectMeta,
+  writeRefreshTimestamp,
+  setRoomName,
+} from "@/lib/yjs";
+import type { RoomSession } from "@/lib/yjs";
 
 export default function Home() {
   return (
@@ -32,10 +47,10 @@ export default function Home() {
 }
 
 function DutyApp() {
-  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].id);
-  const [session, setSession] = useState<CategorySession | null>(null);
+  const [activeRoom, setActiveRoom] = useState(ROOMS[0].id);
+  const [session, setSession] = useState<RoomSession | null>(null);
+  const [roomNames, setRoomNames] = useState<string[]>(DEFAULT_ROOM_NAMES);
   const [mounted, setMounted] = useState(false);
-
   const [busyRefresh, setBusyRefresh] = useState(false);
   const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
 
@@ -44,50 +59,53 @@ function DutyApp() {
     setMounted(true);
   }, []);
 
-  // ── Subscribe to shared last-refresh timestamp (meta room) ──
+  // ── Shared meta state: last refresh + room names ──────────────
   useEffect(() => {
     if (!mounted) return;
 
     const meta = connectMeta();
 
-    const onMetaText = () => {
-      const raw = meta.ytext.toString().trim();
+    const readNames = () =>
+      ROOMS.map((room) => {
+        const stored = meta.names.get(room.id);
+        return typeof stored === "string" && stored.trim() ? stored : room.defaultName;
+      });
+
+    const onRefreshAt = () => {
+      const raw = meta.refreshAt.toString().trim();
       const ts = raw ? Number(raw) : NaN;
       setLastRefreshAt(Number.isFinite(ts) && ts > 0 ? ts : null);
     };
-    onMetaText();
-    meta.ytext.observe(onMetaText);
+
+    const onNames = () => setRoomNames(readNames());
+
+    onRefreshAt();
+    meta.refreshAt.observe(onRefreshAt);
+    onNames();
+    meta.names.observe(onNames);
 
     return () => {
-      meta.ytext.unobserve(onMetaText);
+      meta.refreshAt.unobserve(onRefreshAt);
+      meta.names.unobserve(onNames);
     };
   }, [mounted]);
 
-  // ── Connect to the active category room ──────────────────────
+  // ── Connect to the active room ────────────────────────────────
   useEffect(() => {
     if (!mounted) return;
 
-    const s = connectCategory(activeCategory);
+    const s = connectRoom(activeRoom);
     setSession(s);
 
-    // Subscribe to connection changes
-    const onStatus = (ev: { status: string }) => {
-      setSession((prev) => prev ? { ...prev, connected: ev.status === "connected" } : prev);
-    };
-    // The provider is internal to connectCategory — we subscribe via awareness
-    // but we also poll for connection state
-    const interval = setInterval(() => {
-      const fresh = connectCategory(activeCategory);
-      setSession((prev) =>
-        prev?.connected !== fresh.connected ? { ...prev!, connected: fresh.connected } : prev
-      );
-    }, 3000);
+    const unsubscribe = s.onStatus((connected) => {
+      setSession((prev) => (prev && prev.roomId === activeRoom ? { ...prev, connected } : prev));
+    });
 
     return () => {
-      clearInterval(interval);
-      disconnectCategory(activeCategory);
+      unsubscribe();
+      disconnectRoom(activeRoom);
     };
-  }, [activeCategory, mounted]);
+  }, [activeRoom, mounted]);
 
   // ── Cleanup all on page unload ───────────────────────────────
   useEffect(() => {
@@ -96,34 +114,43 @@ function DutyApp() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
-  // ── Clear all categories (with confirmation) ─────────────────
+  // ── Rename the active room (shared with all users) ────────────
+  const handleRename = useCallback(
+    (name: string) => {
+      setRoomName(activeRoom, name);
+      // Optimistic update — the meta observer will confirm shortly
+      setRoomNames((prev) => prev.map((n, i) => (ROOMS[i].id === activeRoom ? name : n)));
+    },
+    [activeRoom]
+  );
+
+  // ── Clear all rooms' content (names kept) ────────────────────
   const handleClearAll = useCallback(async () => {
     if (typeof window === "undefined") return;
     const ok = window.confirm(
-      "⚠️ Clear ALL fields?\n\nThis will erase every category's content for ALL officers. This action cannot be undone."
+      "⚠️ Clear ALL rooms?\n\nThis will erase the content of all 7 rooms for ALL officers. Room names are kept. This action cannot be undone."
     );
     if (!ok) return;
-    const ids = CATEGORIES.map((c) => c.id);
-    await clearAllCategories(ids);
-    setLastRefreshAt(Date.now());
-    // Best-effort sync to the shared meta room (never blocks the UI)
-    writeRefreshTimestamp(String(Date.now())).catch(() => {});
+    await clearRoomsContent(ROOM_IDS);
+    const ts = Date.now();
+    setLastRefreshAt(ts);
+    writeRefreshTimestamp(String(ts)).catch(() => {});
   }, []);
 
-  // ── Refresh for A-C: clear all rooms, seed EOS + Overlapping ─
+  // ── Refresh (A-C): clear all rooms, rename to the A-C set ─────
   const handleRefreshAC = useCallback(async () => {
     if (typeof window === "undefined") return;
     const ok = window.confirm(
-      "Refresh (A-C)?\n\nThis will clear ALL rooms, then fill EOS and Overlapping with the A-C template."
+      `Refresh (A-C)?\n\nThis will clear ALL 7 rooms for everyone, fill the first 5 rooms with the A-C template, then name the rooms:\n${AC_ROOM_NAMES.join(", ")}.`
     );
     if (!ok) return;
     setBusyRefresh(true);
     try {
-      await refreshForAC(
-        CATEGORIES.map((c) => c.id),
-        [...AC_REFRESH_ROOMS],
-        AC_REFRESH_TEMPLATE
-      );
+      await refreshRooms(ROOM_IDS, [...AC_ROOM_NAMES], {
+        roomIds: AC_SEED_ROOM_IDS,
+        content: AC_SEED_CONTENT,
+      });
+      setRoomNames([...AC_ROOM_NAMES]);
       const ts = Date.now();
       setLastRefreshAt(ts);
       writeRefreshTimestamp(String(ts)).catch(() => {});
@@ -132,20 +159,17 @@ function DutyApp() {
     }
   }, []);
 
-  // ── Refresh for D: clear all rooms, seed EOS only ────────────
+  // ── Refresh (D): clear all rooms, rename to the D set ─────────
   const handleRefreshD = useCallback(async () => {
     if (typeof window === "undefined") return;
     const ok = window.confirm(
-      "Refresh (D)?\n\nThis will clear ALL rooms, then fill EOS with the D template."
+      `Refresh (D)?\n\nThis will clear ALL 7 rooms for everyone, then name the rooms:\n${D_ROOM_NAMES.join(", ")}.`
     );
     if (!ok) return;
     setBusyRefresh(true);
     try {
-      await refreshForAC(
-        CATEGORIES.map((c) => c.id),
-        [...D_REFRESH_ROOMS],
-        D_REFRESH_TEMPLATE
-      );
+      await refreshRooms(ROOM_IDS, [...D_ROOM_NAMES]);
+      setRoomNames([...D_ROOM_NAMES]);
       const ts = Date.now();
       setLastRefreshAt(ts);
       writeRefreshTimestamp(String(ts)).catch(() => {});
@@ -154,16 +178,16 @@ function DutyApp() {
     }
   }, []);
 
-  // ── Download all content as .txt ──────────────────────────────
+  // ── Download all rooms' content as .txt ───────────────────────
   const handleDownload = useCallback(async () => {
-    const ids = CATEGORIES.map((c) => c.id);
-    const content = await collectAllContent(ids);
+    const content = await collectAllContent(ROOM_IDS, roomNames);
     const date = new Date().toISOString().slice(0, 10);
     downloadAsFile(`duty-report-${date}.txt`, content);
-  }, []);
+  }, [roomNames]);
 
-  const activeLabel =
-    CATEGORIES.find((c) => c.id === activeCategory)?.label || "";
+  const activeIndex = Math.max(0, ROOMS.findIndex((r) => r.id === activeRoom));
+  const activeName = roomNames[activeIndex] || ROOMS[activeIndex].defaultName;
+  const activeSession = session && session.roomId === activeRoom ? session : null;
 
   if (!mounted) {
     return (
@@ -184,7 +208,7 @@ function DutyApp() {
           <DuckLogo size={48} className="shrink-0" />
           <div className="min-w-0">
             <h1 className="text-xl font-extrabold tracking-tight text-brand-800">
-              Report Duck 1.0
+              Report Duck 2.0
             </h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="inline-block w-6 h-0.5 bg-gold rounded-full" />
@@ -203,7 +227,7 @@ function DutyApp() {
           </div>
         </div>
 
-        {/* Action buttons */}
+        {/* Action buttons — same order as 1.0: A-C → D → Clear → Download */}
         <div className="flex items-center gap-1 mt-3">
           <button
             onClick={handleRefreshAC}
@@ -248,41 +272,28 @@ function DutyApp() {
         </div>
       </header>
 
-      {/* Category Tabs */}
-      <CategoryTabs
-        activeId={activeCategory}
-        onSelect={setActiveCategory}
-      />
+      {/* Room Tabs */}
+      <RoomTabs activeId={activeRoom} names={roomNames} onSelect={setActiveRoom} />
 
       {/* Editor — card on warm-grey canvas, fade-in on tab switch */}
       <main className="flex-1 px-3 py-3">
         <div
-          key={activeCategory}
+          key={activeRoom}
           className="h-full bg-white rounded-2xl shadow-[0_1px_3px_rgba(15,28,44,0.08)] border border-gray-100 animate-fade-slide overflow-hidden"
         >
+          <RoomNameBar name={activeName} onRename={handleRename} />
           <EditorField
-            categoryLabel={activeLabel}
-            ytext={session?.ytext ?? null}
-            awareness={session?.awareness ?? null}
-            connected={session?.connected ?? false}
-            template={
-              activeCategory === "eos" || activeCategory === "overlapping"
-                ? BOTTOM_TEMPLATE
-                : activeCategory === "asgp"
-                ? ASGP_TEMPLATE
-                : activeCategory === "mtr-patrol"
-                ? MTR_TEMPLATE
-                : activeCategory === "cnap-check"
-                ? SNAP_TEMPLATE
-                : null
-            }
+            roomName={activeName}
+            ytext={activeSession?.ytext ?? null}
+            awareness={activeSession?.awareness ?? null}
+            connected={activeSession?.connected ?? false}
           />
         </div>
       </main>
 
       {/* Footer */}
       <footer className="mt-auto px-4 py-3 text-center text-[11px] text-gray-400">
-        Report Duck 1.0 · Changes sync in real-time across all devices
+        Report Duck 2.0 · Changes sync in real-time across all devices
       </footer>
     </div>
   );

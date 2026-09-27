@@ -1,26 +1,38 @@
 /**
- * Yjs + y-websocket integration
+ * Yjs + y-websocket integration for Report Duck 2.0.
  *
- * Creates a Y.Doc per category and connects it to the sync server.
- * Each doc has a single Y.Text shared type named "content".
- * Awareness tracks who else is viewing each category.
+ * - One Y.Doc per room ("room-1" … "room-7"), each with a Y.Text "content".
+ * - A shared "meta" room holds the last-refresh timestamp and the editable
+ *   room names (Y.Map "roomnames") so renames sync to every officer.
+ * - Batch operations (Refresh / Clear / Download) open short-lived
+ *   connections per room so they always act on server state.
  */
 
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 
-/** Auto-detect WebSocket URL from current page location */
+/** Auto-detect WebSocket URL from the current page location. */
 function getWsUrl(): string {
-  if (typeof window === "undefined") return "ws://localhost:3000";
+  if (typeof window === "undefined") return "ws://localhost:3002";
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
   return `${proto}//${window.location.host}`;
 }
 
-export interface CategorySession {
+export interface RoomSession {
+  roomId: string;
   ytext: Y.Text;
   awareness: WebsocketProvider["awareness"];
   connected: boolean;
   /** Subscribe to connection status changes. Returns unsubscribe fn. */
+  onStatus: (cb: (connected: boolean) => void) => () => void;
+}
+
+export interface MetaSession {
+  doc: Y.Doc;
+  refreshAt: Y.Text;
+  names: Y.Map<string>;
+  awareness: WebsocketProvider["awareness"];
+  connected: boolean;
   onStatus: (cb: (connected: boolean) => void) => () => void;
 }
 
@@ -31,6 +43,7 @@ type SessionEntry = {
 };
 
 const sessions = new Map<string, SessionEntry>();
+const META_ROOM = "meta";
 
 // ── User identity (lazy, browser-only) ──────────────────────────
 
@@ -49,7 +62,7 @@ function getUserIdentity(): { name: string; color: string } {
     "Otter", "Raven", "Deer", "Falcon", "Puma",
   ];
   try {
-    const stored = sessionStorage.getItem("duty-user");
+    const stored = sessionStorage.getItem("duck2-user");
     if (stored) return JSON.parse(stored);
   } catch { /* ignore */ }
 
@@ -57,56 +70,62 @@ function getUserIdentity(): { name: string; color: string } {
     name: animals[Math.floor(Math.random() * animals.length)],
     color: colors[Math.floor(Math.random() * colors.length)],
   };
-  try { sessionStorage.setItem("duty-user", JSON.stringify(identity)); } catch { /* ignore */ }
+  try { sessionStorage.setItem("duck2-user", JSON.stringify(identity)); } catch { /* ignore */ }
   _userIdentity = identity;
   return identity;
 }
 
-// ── Public API ───────────────────────────────────────────────────
+function makeStatusSubscriber(e: SessionEntry) {
+  return (cb: (connected: boolean) => void) => {
+    const handler = ({ status }: { status: string }) => cb(status === "connected");
+    e.provider.on("status", handler);
+    cb(e.provider.wsconnected); // emit current state immediately
+    return () => e.provider.off("status", handler);
+  };
+}
 
-export function connectCategory(categoryId: string): CategorySession {
-  const existing = sessions.get(categoryId);
-  if (existing) {
-    return makeSession(existing);
-  }
+// ── Room connections ────────────────────────────────────────────
 
+function createSession(roomId: string): SessionEntry {
   const doc = new Y.Doc();
-  const provider = new WebsocketProvider(getWsUrl(), categoryId, doc, {
+  const provider = new WebsocketProvider(getWsUrl(), roomId, doc, {
     connect: true,
     maxBackoffTime: 10000,
   });
-
   provider.awareness.setLocalState(getUserIdentity());
 
   const entry: SessionEntry = { doc, provider, awareness: provider.awareness };
-  sessions.set(categoryId, entry);
-  return makeSession(entry);
+  sessions.set(roomId, entry);
+  return entry;
 }
 
-export function disconnectCategory(categoryId: string) {
-  const s = sessions.get(categoryId);
+export function connectRoom(roomId: string): RoomSession {
+  const entry = sessions.get(roomId) ?? createSession(roomId);
+  return {
+    roomId,
+    ytext: entry.doc.getText("content"),
+    awareness: entry.awareness,
+    connected: entry.provider.wsconnected,
+    onStatus: makeStatusSubscriber(entry),
+  };
+}
+
+export function disconnectRoom(roomId: string) {
+  const s = sessions.get(roomId);
   if (s) {
     s.provider.disconnect();
     s.doc.destroy();
-    sessions.delete(categoryId);
+    sessions.delete(roomId);
   }
 }
 
 export function disconnectAll() {
-  sessions.forEach((_, id) => disconnectCategory(id));
+  sessions.forEach((_, id) => disconnectRoom(id));
 }
 
-// ── Shared "last refresh" timestamp (meta room) ────────────────
+// ── Meta room (last refresh + shared room names) ────────────────
 
-const META_ROOM = "meta";
-
-/** Connect to the shared meta room (used for header refresh timestamp). */
-export function connectMeta(): CategorySession {
-  const existing = sessions.get(META_ROOM);
-  if (existing) {
-    return makeMetaSession(existing);
-  }
-
+function createMetaSession(): SessionEntry {
   const doc = new Y.Doc();
   const provider = new WebsocketProvider(getWsUrl(), META_ROOM, doc, {
     connect: true,
@@ -116,7 +135,19 @@ export function connectMeta(): CategorySession {
 
   const entry: SessionEntry = { doc, provider, awareness: provider.awareness };
   sessions.set(META_ROOM, entry);
-  return makeMetaSession(entry);
+  return entry;
+}
+
+export function connectMeta(): MetaSession {
+  const entry = sessions.get(META_ROOM) ?? createMetaSession();
+  return {
+    doc: entry.doc,
+    refreshAt: entry.doc.getText("refreshAt"),
+    names: entry.doc.getMap<string>("roomnames"),
+    awareness: entry.awareness,
+    connected: entry.provider.wsconnected,
+    onStatus: makeStatusSubscriber(entry),
+  };
 }
 
 /** Write the last-refresh timestamp into the meta room (sync-safe). */
@@ -141,23 +172,13 @@ export async function writeRefreshTimestamp(ts: string): Promise<void> {
   doc.destroy();
 }
 
-function makeMetaSession(e: SessionEntry): CategorySession {
-  const ytext = e.doc.getText("refreshAt") as Y.Text;
-  return {
-    ytext,
-    awareness: e.awareness,
-    connected: e.provider.wsconnected,
-    onStatus(cb: (connected: boolean) => void) {
-      const handler = ({ status }: { status: string }) =>
-        cb(status === "connected");
-      e.provider.on("status", handler);
-      cb(e.provider.wsconnected);
-      return () => e.provider.off("status", handler);
-    },
-  };
+/** Rename one room (shared with every officer). */
+export function setRoomName(roomId: string, name: string): void {
+  const meta = connectMeta();
+  meta.names.set(roomId, name);
 }
 
-// ── Batch operations ──────────────────────────────────────────
+// ── Batch operations ────────────────────────────────────────────
 
 /** Resolve once the provider has synced, or give up after ms. */
 function waitForSync(provider: WebsocketProvider, ms = 8000): Promise<void> {
@@ -171,11 +192,11 @@ function waitForSync(provider: WebsocketProvider, ms = 8000): Promise<void> {
   });
 }
 
-/** Clear all category texts. Connects to each room, waits for sync, clears, then disconnects. */
-export async function clearAllCategories(categoryIds: string[]): Promise<void> {
+/** Clear every room's content. Connects to each room, waits for sync, clears, then disconnects. */
+export async function clearRoomsContent(roomIds: string[]): Promise<void> {
   const providers: WebsocketProvider[] = [];
 
-  for (const id of categoryIds) {
+  for (const id of roomIds) {
     const doc = new Y.Doc();
     const provider = new WebsocketProvider(getWsUrl(), id, doc, {
       connect: true,
@@ -183,7 +204,6 @@ export async function clearAllCategories(categoryIds: string[]): Promise<void> {
     });
     providers.push(provider);
 
-    // Wait for the doc to sync with the server before clearing
     await waitForSync(provider);
 
     const ytext = doc.getText("content");
@@ -199,19 +219,25 @@ export async function clearAllCategories(categoryIds: string[]): Promise<void> {
   }
 }
 
+export interface RefreshSeed {
+  /** Room ids that receive the seed content */
+  roomIds: string[];
+  content: string;
+}
+
 /**
- * Clear every room, then write `template` into the seed rooms (EOS + Overlapping).
- * Independent providers per room; wait for sync before mutating.
+ * Refresh: clear every room, optionally write seed content into some of them,
+ * then apply the shift's room names to all users.
  */
-export async function refreshForAC(
-  categoryIds: string[],
-  seedIds: string[],
-  template: string
+export async function refreshRooms(
+  roomIds: string[],
+  names: string[],
+  seed?: RefreshSeed
 ): Promise<void> {
   const providers: WebsocketProvider[] = [];
-  const seed = new Set(seedIds);
+  const seedIds = new Set(seed?.roomIds ?? []);
 
-  for (const id of categoryIds) {
+  for (const id of roomIds) {
     const doc = new Y.Doc();
     const provider = new WebsocketProvider(getWsUrl(), id, doc, {
       connect: true,
@@ -223,26 +249,35 @@ export async function refreshForAC(
 
     const ytext = doc.getText("content");
     ytext.delete(0, ytext.length);
-    if (seed.has(id) && template) {
-      ytext.insert(0, template);
+    if (seed && seed.content && seedIds.has(id)) {
+      ytext.insert(0, seed.content);
     }
   }
 
+  // Allow changes to propagate to all peers before disconnecting
   await new Promise((r) => setTimeout(r, 600));
 
   for (const p of providers) {
     p.disconnect();
     p.doc.destroy();
   }
+
+  const meta = connectMeta();
+  meta.doc.transact(() => {
+    roomIds.forEach((id, i) => {
+      meta.names.set(id, names[i] ?? `Room ${i + 1}`);
+    });
+  }, "refresh-rooms");
 }
 
-/** Collect content from all categories and return formatted text. */
-export function collectAllContent(categoryIds: string[]): Promise<string> {
+/** Collect content from all rooms and return formatted text. */
+export function collectAllContent(roomIds: string[], labels: string[]): Promise<string> {
   return (async () => {
     const providers: WebsocketProvider[] = [];
-    const texts: { id: string; text: string }[] = [];
+    const texts: { label: string; text: string }[] = [];
 
-    for (const id of categoryIds) {
+    for (let i = 0; i < roomIds.length; i++) {
+      const id = roomIds[i];
       const doc = new Y.Doc();
       const provider = new WebsocketProvider(getWsUrl(), id, doc, {
         connect: true,
@@ -250,14 +285,10 @@ export function collectAllContent(categoryIds: string[]): Promise<string> {
       });
       providers.push(provider);
 
-      // Wait for full sync with server before reading
-      await new Promise<void>((resolve) => {
-        if (provider.synced) { resolve(); return; }
-        provider.once("sync", () => resolve());
-      });
+      await waitForSync(provider);
 
       const text = doc.getText("content").toString().trim();
-      texts.push({ id, text });
+      texts.push({ label: labels[i] ?? id, text });
     }
 
     // Disconnect all temporary connections
@@ -269,12 +300,12 @@ export function collectAllContent(categoryIds: string[]): Promise<string> {
     // Build formatted output
     const lines: string[] = [];
     const now = new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" });
-    lines.push(`Report Duck 1.0 — ${now}`);
+    lines.push(`Report Duck 2.0 — ${now}`);
     lines.push("=".repeat(40));
     lines.push("");
 
-    for (const { id, text } of texts) {
-      lines.push(`[${id.toUpperCase()}]`);
+    for (const { label, text } of texts) {
+      lines.push(`[${label}]`);
       lines.push(text || "(empty)");
       lines.push("");
     }
@@ -295,22 +326,4 @@ export function downloadAsFile(filename: string, content: string) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
-
-// ── Helpers ──────────────────────────────────────────────────────
-
-function makeSession(e: SessionEntry): CategorySession {
-  return {
-    ytext: e.doc.getText("content") as Y.Text,
-    awareness: e.awareness,
-    connected: e.provider.wsconnected,
-    onStatus(cb: (connected: boolean) => void) {
-      const handler = ({ status }: { status: string }) =>
-        cb(status === "connected");
-      e.provider.on("status", handler);
-      // Immediately emit current state
-      cb(e.provider.wsconnected);
-      return () => e.provider.off("status", handler);
-    },
-  };
 }
