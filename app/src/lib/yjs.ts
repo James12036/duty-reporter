@@ -270,6 +270,49 @@ export async function refreshRooms(
   }, "refresh-rooms");
 }
 
+/**
+ * Observe every room's content in real time (used by the Admin overview).
+ * Opens silent temporary connections (no presence) — call the returned
+ * function to tear them all down.
+ */
+export function observeRooms(
+  roomIds: string[],
+  onUpdate: (snapshot: Record<string, string>) => void
+): () => void {
+  const snapshot: Record<string, string> = {};
+  const entries: { provider: WebsocketProvider; doc: Y.Doc }[] = [];
+
+  const emit = () => onUpdate({ ...snapshot });
+
+  roomIds.forEach((id) => {
+    const doc = new Y.Doc();
+    const ytext = doc.getText("content");
+    const provider = new WebsocketProvider(getWsUrl(), id, doc, {
+      connect: true,
+      maxBackoffTime: 10000,
+    });
+    provider.awareness.setLocalState(null); // silent observer — no presence dot
+
+    ytext.observe(() => {
+      snapshot[id] = ytext.toString();
+      emit();
+    });
+    provider.on("sync", () => {
+      snapshot[id] = ytext.toString();
+      emit();
+    });
+
+    entries.push({ provider, doc });
+  });
+
+  return () => {
+    entries.forEach(({ provider, doc }) => {
+      provider.disconnect();
+      doc.destroy();
+    });
+  };
+}
+
 /** Collect content from all rooms and return formatted text. */
 export function collectAllContent(roomIds: string[], labels: string[]): Promise<string> {
   return (async () => {

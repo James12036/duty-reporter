@@ -9,6 +9,7 @@
 3. **Refresh (A-C)** → 清空所有房間，頭 5 間填入 A-C 模板內容（EOS／Overlapping／Others 三段），並將 7 間改名為：MP CW、SUP CW、MP SKW、SUP SKW、SUP SO、Other 1、Other 2
 4. **Refresh (D)** → 清空所有房間，並將 7 間改名為：D、D2、D7、H3、Other 1、Other 2、Other 3
 5. **修正打字跳頂問題** — 有其他人同時打字時，唔會再彈返去頂部（改用 diff 式 textarea binding，保留捲軸同游標位置）
+6. **Admin** — 撳右上角「Admin」掣，喺一個版面實時睇晒 7 間房目前嘅輸入內容（唯讀）
 
 登入方式同 1.0 一樣：個人 access code + 共用 password。
 
@@ -40,7 +41,7 @@ NODE_ENV=production PORT=3002 node server.js
 - `app/src/config/rooms.ts` — 房間清單、Refresh 名稱組合、A-C 模板內容
 - `app/src/lib/textarea-binding.ts` — 修正跳頂問題嘅核心（diff 式同步）
 - `app/src/lib/yjs.ts` — Yjs 連線／房間名同步／Refresh、Clear、Download
-- `app/src/components/` — RoomTabs、RoomNameBar、EditorField、PinGate、DuckLogo
+- `app/src/components/` — RoomTabs、RoomNameBar、EditorField、AdminView、PinGate、DuckLogo
 - `app/server.js` — Next.js + y-websocket 單一端口伺服器
 - `app/auth.js` — access code 登入（server-only，唔會出 client bundle）
 - `render.yaml` — Render 部署設定

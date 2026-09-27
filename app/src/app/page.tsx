@@ -7,12 +7,14 @@
  * - Room names are editable by hand (✏️ Rename) and shared with everyone.
  * - Refresh (A-C) / Refresh (D) clear all rooms and rename them to the
  *   shift's preset names.
+ * - Admin opens a live, read-only overview of all rooms at once.
  */
 
 import { useCallback, useEffect, useState } from "react";
 import RoomTabs from "@/components/RoomTabs";
 import EditorField from "@/components/EditorField";
 import RoomNameBar from "@/components/RoomNameBar";
+import AdminView from "@/components/AdminView";
 import PinGate from "@/components/PinGate";
 import DuckLogo from "@/components/DuckLogo";
 import {
@@ -53,6 +55,7 @@ function DutyApp() {
   const [mounted, setMounted] = useState(false);
   const [busyRefresh, setBusyRefresh] = useState(false);
   const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
+  const [showAdmin, setShowAdmin] = useState(false);
 
   // ── Hydration guard (Next.js SSR) ────────────────────────────
   useEffect(() => {
@@ -227,7 +230,7 @@ function DutyApp() {
           </div>
         </div>
 
-        {/* Action buttons — same order as 1.0: A-C → D → Clear → Download */}
+        {/* Action buttons — same order as 1.0: A-C → D → Clear → Download → Admin */}
         <div className="flex items-center gap-1 mt-3">
           <button
             onClick={handleRefreshAC}
@@ -269,6 +272,15 @@ function DutyApp() {
           >
             Download
           </button>
+          <button
+            onClick={() => setShowAdmin(true)}
+            className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium whitespace-nowrap
+                       bg-slate-50 text-slate-700 border border-slate-200
+                       hover:bg-slate-100 active:scale-[0.97] transition-all
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
+          >
+            Admin
+          </button>
         </div>
       </header>
 
@@ -295,6 +307,15 @@ function DutyApp() {
       <footer className="mt-auto px-4 py-3 text-center text-[11px] text-gray-400">
         Report Duck 2.0 · Changes sync in real-time across all devices
       </footer>
+
+      {/* Admin — live overview of all rooms */}
+      {showAdmin && (
+        <AdminView
+          roomIds={ROOM_IDS}
+          roomNames={roomNames}
+          onClose={() => setShowAdmin(false)}
+        />
+      )}
     </div>
   );
 }
