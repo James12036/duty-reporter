@@ -1,7 +1,8 @@
 /**
- * Yjs + y-websocket integration for Report Duck 2.0.
+ * Yjs + y-websocket integration for Report Duck 2.1.
  *
- * - One Y.Doc per room ("room-1" … "room-7"), each with a Y.Text "content".
+ * - One Y.Doc per room ("room-1" … "room-7"); each room holds THREE Y.Text
+ *   fields: "eos", "overlapping", "others".
  * - A shared "meta" room holds the last-refresh timestamp and the editable
  *   room names (Y.Map "roomnames") so renames sync to every officer.
  * - Batch operations (Refresh / Clear / Download) open short-lived
@@ -10,6 +11,7 @@
 
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
+import { ROOM_FIELDS } from "@/config/rooms";
 
 /** Auto-detect WebSocket URL from the current page location. */
 function getWsUrl(): string {
@@ -20,7 +22,8 @@ function getWsUrl(): string {
 
 export interface RoomSession {
   roomId: string;
-  ytext: Y.Text;
+  /** Y.Text accessor for one of the room's fields ("eos" | "overlapping" | "others"). */
+  fieldText: (fieldId: string) => Y.Text;
   awareness: WebsocketProvider["awareness"];
   connected: boolean;
   /** Subscribe to connection status changes. Returns unsubscribe fn. */
@@ -103,7 +106,7 @@ export function connectRoom(roomId: string): RoomSession {
   const entry = sessions.get(roomId) ?? createSession(roomId);
   return {
     roomId,
-    ytext: entry.doc.getText("content"),
+    fieldText: (fieldId: string) => entry.doc.getText(fieldId),
     awareness: entry.awareness,
     connected: entry.provider.wsconnected,
     onStatus: makeStatusSubscriber(entry),
@@ -192,7 +195,7 @@ function waitForSync(provider: WebsocketProvider, ms = 8000): Promise<void> {
   });
 }
 
-/** Clear every room's content. Connects to each room, waits for sync, clears, then disconnects. */
+/** Clear every field of every room. Connects to each room, waits for sync, clears, then disconnects. */
 export async function clearRoomsContent(roomIds: string[]): Promise<void> {
   const providers: WebsocketProvider[] = [];
 
@@ -206,8 +209,10 @@ export async function clearRoomsContent(roomIds: string[]): Promise<void> {
 
     await waitForSync(provider);
 
-    const ytext = doc.getText("content");
-    ytext.delete(0, ytext.length);
+    for (const field of ROOM_FIELDS) {
+      const ytext = doc.getText(field.id);
+      ytext.delete(0, ytext.length);
+    }
   }
 
   // Allow changes to propagate to all peers before disconnecting
@@ -219,23 +224,12 @@ export async function clearRoomsContent(roomIds: string[]): Promise<void> {
   }
 }
 
-export interface RefreshSeed {
-  /** Room ids that receive the seed content */
-  roomIds: string[];
-  content: string;
-}
-
 /**
- * Refresh: clear every room, optionally write seed content into some of them,
- * then apply the shift's room names to all users.
+ * Refresh: clear every field of every room, then apply the shift's room
+ * names to all users. (2.1: no template content is written any more.)
  */
-export async function refreshRooms(
-  roomIds: string[],
-  names: string[],
-  seed?: RefreshSeed
-): Promise<void> {
+export async function refreshRooms(roomIds: string[], names: string[]): Promise<void> {
   const providers: WebsocketProvider[] = [];
-  const seedIds = new Set(seed?.roomIds ?? []);
 
   for (const id of roomIds) {
     const doc = new Y.Doc();
@@ -247,10 +241,9 @@ export async function refreshRooms(
 
     await waitForSync(provider);
 
-    const ytext = doc.getText("content");
-    ytext.delete(0, ytext.length);
-    if (seed && seed.content && seedIds.has(id)) {
-      ytext.insert(0, seed.content);
+    for (const field of ROOM_FIELDS) {
+      const ytext = doc.getText(field.id);
+      ytext.delete(0, ytext.length);
     }
   }
 
@@ -271,36 +264,40 @@ export async function refreshRooms(
 }
 
 /**
- * Observe every room's content in real time (used by the Admin overview).
+ * Observe every room's three fields in real time (used by the Admin overview).
+ * Snapshot shape: { [roomId]: { [fieldId]: text } }.
  * Opens silent temporary connections (no presence) — call the returned
  * function to tear them all down.
  */
 export function observeRooms(
   roomIds: string[],
-  onUpdate: (snapshot: Record<string, string>) => void
+  onUpdate: (snapshot: Record<string, Record<string, string>>) => void
 ): () => void {
-  const snapshot: Record<string, string> = {};
+  const snapshot: Record<string, Record<string, string>> = {};
   const entries: { provider: WebsocketProvider; doc: Y.Doc }[] = [];
 
   const emit = () => onUpdate({ ...snapshot });
 
   roomIds.forEach((id) => {
     const doc = new Y.Doc();
-    const ytext = doc.getText("content");
     const provider = new WebsocketProvider(getWsUrl(), id, doc, {
       connect: true,
       maxBackoffTime: 10000,
     });
     provider.awareness.setLocalState(null); // silent observer — no presence dot
 
-    ytext.observe(() => {
-      snapshot[id] = ytext.toString();
+    const fields: Record<string, string> = {};
+    snapshot[id] = fields;
+
+    const readAll = () => {
+      for (const field of ROOM_FIELDS) fields[field.id] = doc.getText(field.id).toString();
       emit();
-    });
-    provider.on("sync", () => {
-      snapshot[id] = ytext.toString();
-      emit();
-    });
+    };
+
+    for (const field of ROOM_FIELDS) {
+      doc.getText(field.id).observe(readAll);
+    }
+    provider.on("sync", readAll);
 
     entries.push({ provider, doc });
   });
@@ -313,11 +310,11 @@ export function observeRooms(
   };
 }
 
-/** Collect content from all rooms and return formatted text. */
+/** Collect all rooms' fields and return formatted text. */
 export function collectAllContent(roomIds: string[], labels: string[]): Promise<string> {
   return (async () => {
     const providers: WebsocketProvider[] = [];
-    const texts: { label: string; text: string }[] = [];
+    const rooms: { label: string; fields: { label: string; text: string }[] }[] = [];
 
     for (let i = 0; i < roomIds.length; i++) {
       const id = roomIds[i];
@@ -330,8 +327,13 @@ export function collectAllContent(roomIds: string[], labels: string[]): Promise<
 
       await waitForSync(provider);
 
-      const text = doc.getText("content").toString().trim();
-      texts.push({ label: labels[i] ?? id, text });
+      rooms.push({
+        label: labels[i] ?? id,
+        fields: ROOM_FIELDS.map((field) => ({
+          label: field.label,
+          text: doc.getText(field.id).toString().trim(),
+        })),
+      });
     }
 
     // Disconnect all temporary connections
@@ -343,14 +345,17 @@ export function collectAllContent(roomIds: string[], labels: string[]): Promise<
     // Build formatted output
     const lines: string[] = [];
     const now = new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" });
-    lines.push(`Report Duck 2.0 — ${now}`);
+    lines.push(`Report Duck 2.1 — ${now}`);
     lines.push("=".repeat(40));
     lines.push("");
 
-    for (const { label, text } of texts) {
+    for (const { label, fields } of rooms) {
       lines.push(`[${label}]`);
-      lines.push(text || "(empty)");
-      lines.push("");
+      for (const field of fields) {
+        lines.push(`${field.label}:`);
+        lines.push(field.text || "(empty)");
+        lines.push("");
+      }
     }
 
     return lines.join("\n");

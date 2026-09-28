@@ -1,5 +1,5 @@
 /**
- * Report Duck 2.0 — server-only access-code gate.
+ * Report Duck 2.1 — server-only access-code gate.
  * PINs never ship in the Next.js client bundle.
  */
 

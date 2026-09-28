@@ -1,17 +1,18 @@
-# 🦆 Report Duck 2.0
+# 🦆 Report Duck 2.1
 
-報告鴨 2.0 — 7 房間即時協作報告工具（Report Duck 1.0 嘅改良版）。
+報告鴨 2.1 — 7 個房間 × 3 個文字框即時協作報告工具。
 
-## 2.0 改動（對比 1.0）
+## 功能
 
-1. **7 個房間**（原 6 個分類）
+1. **7 個共享房間**，每間房 3 個文字框：**EOS／Overlapping／Others**（各自獨立實時同步；EOS 較大、Overlapping／Others 較細）
 2. **房間名稱可以人手改** — 撳編輯區右上「✏️ Rename」，改名即時同步畀所有人
-3. **Refresh (A-C)** → 清空所有房間，頭 5 間填入 A-C 模板內容（EOS／Overlapping／Others 三段），並將 7 間改名為：MP CW、SUP CW、MP SKW、SUP SKW、SUP SO、Other 1、Other 2
-4. **Refresh (D)** → 清空所有房間，並將 7 間改名為：D、D2、D7、H3、Other 1、Other 2、Other 3
-5. **修正打字跳頂問題** — 有其他人同時打字時，唔會再彈返去頂部（改用 diff 式 textarea binding，保留捲軸同游標位置）
-6. **Admin** — 撳右上角「Admin」掣，喺一個版面實時睇晒 7 間房目前嘅輸入內容（唯讀）
+3. **Refresh (A-C)** — 清空所有房間，並改名為：MP CW、SUP CW、MP SKW、SUP SKW、SUP SO、Other 1、Other 2（唔會再自動填入模板內容）
+4. **Refresh (D)** — 清空所有房間，並改名為：D、D2、D7、H3、Other 1、Other 2、Other 3
+5. **Download** — 一鍵下載全部房間內容（按 EOS／Overlapping／Others 分段）做 .txt
+6. **Admin** — 一個版面實時睇晒 7 間房（唯讀）：有內容嘅文字框先顯示；無內容嘅房顯示「No content yet」
+7. **修正打字跳頂問題** — 有其他人同時打字時，唔會再彈返去頂部（改用 diff 式 textarea binding，保留捲軸同游標位置）
 
-登入方式同 1.0 一樣：個人 access code + 共用 password。
+登入方式不變：個人 access code + 共用 password。
 
 ## 技術架構
 
@@ -36,19 +37,19 @@ NODE_ENV=production PORT=3002 node server.js
 # 開 http://localhost:3002
 ```
 
+（本地開發版：`/Users/James/report-duck-2/app`，功能相同）
+
 ## 檔案結構
 
-- `app/src/config/rooms.ts` — 房間清單、Refresh 名稱組合、A-C 模板內容
+- `app/src/config/rooms.ts` — 房間清單、3 個文字框定義（ROOM_FIELDS）、Refresh 名稱組合
 - `app/src/lib/textarea-binding.ts` — 修正跳頂問題嘅核心（diff 式同步）
-- `app/src/lib/yjs.ts` — Yjs 連線／房間名同步／Refresh、Clear、Download
-- `app/src/components/` — RoomTabs、RoomNameBar、EditorField、AdminView、PinGate、DuckLogo
+- `app/src/lib/yjs.ts` — Yjs 連線／房間名同步／Refresh、Download、Admin 觀察
+- `app/src/components/` — RoomTabs、RoomNameBar、EditorField（3 框）、AdminView、PinGate、DuckLogo
 - `app/server.js` — Next.js + y-websocket 單一端口伺服器
 - `app/auth.js` — access code 登入（server-only，唔會出 client bundle）
 - `render.yaml` — Render 部署設定
 
-## Report Duck 1.0 存檔
+## 版本存檔
 
-1.0 已凍結保存，需要時可以隨時用返：
-
-- Git tag `duck-1.0`（喺呢個 repo 嘅歷史入面，已 push 上 GitHub）
-- 本地完整副本：`/Users/James/report-duck-1.0-archive`（連 git 歷史同 node_modules，可直接運行）
+- **Report Duck 1.0**：git tag `duck-1.0` + 本地完整副本 `/Users/James/report-duck-1.0-archive`（連 git 歷史同 node_modules，可直接運行）
+- **Report Duck 2.0**：git tag `duck-2.0`（需要時 `git checkout duck-2.0` 即可取回）

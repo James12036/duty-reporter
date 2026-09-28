@@ -1,12 +1,13 @@
 "use client";
 
 /**
- * Report Duck 2.0 — Main Page
+ * Report Duck 2.1 — Main Page
  *
- * - 7 shared rooms ("room-1" … "room-7"), each its own Yjs room.
+ * - 7 shared rooms ("room-1" … "room-7"), each its own Yjs room with three
+ *   text fields (EOS / Overlapping / Others) inside EditorField.
  * - Room names are editable by hand (✏️ Rename) and shared with everyone.
  * - Refresh (A-C) / Refresh (D) clear all rooms and rename them to the
- *   shift's preset names.
+ *   shift's preset names (no template content is written).
  * - Admin opens a live, read-only overview of all rooms at once.
  */
 
@@ -22,15 +23,12 @@ import {
   ROOM_IDS,
   DEFAULT_ROOM_NAMES,
   AC_ROOM_NAMES,
-  AC_SEED_CONTENT,
-  AC_SEED_ROOM_IDS,
   D_ROOM_NAMES,
 } from "@/config/rooms";
 import {
   connectRoom,
   disconnectRoom,
   disconnectAll,
-  clearRoomsContent,
   refreshRooms,
   collectAllContent,
   downloadAsFile,
@@ -127,32 +125,16 @@ function DutyApp() {
     [activeRoom]
   );
 
-  // ── Clear all rooms' content (names kept) ────────────────────
-  const handleClearAll = useCallback(async () => {
-    if (typeof window === "undefined") return;
-    const ok = window.confirm(
-      "⚠️ Clear ALL rooms?\n\nThis will erase the content of all 7 rooms for ALL officers. Room names are kept. This action cannot be undone."
-    );
-    if (!ok) return;
-    await clearRoomsContent(ROOM_IDS);
-    const ts = Date.now();
-    setLastRefreshAt(ts);
-    writeRefreshTimestamp(String(ts)).catch(() => {});
-  }, []);
-
   // ── Refresh (A-C): clear all rooms, rename to the A-C set ─────
   const handleRefreshAC = useCallback(async () => {
     if (typeof window === "undefined") return;
     const ok = window.confirm(
-      `Refresh (A-C)?\n\nThis will clear ALL 7 rooms for everyone, fill the first 5 rooms with the A-C template, then name the rooms:\n${AC_ROOM_NAMES.join(", ")}.`
+      `Refresh (A-C)?\n\nThis will clear ALL 7 rooms for everyone, then name the rooms:\n${AC_ROOM_NAMES.join(", ")}.`
     );
     if (!ok) return;
     setBusyRefresh(true);
     try {
-      await refreshRooms(ROOM_IDS, [...AC_ROOM_NAMES], {
-        roomIds: AC_SEED_ROOM_IDS,
-        content: AC_SEED_CONTENT,
-      });
+      await refreshRooms(ROOM_IDS, [...AC_ROOM_NAMES]);
       setRoomNames([...AC_ROOM_NAMES]);
       const ts = Date.now();
       setLastRefreshAt(ts);
@@ -211,7 +193,7 @@ function DutyApp() {
           <DuckLogo size={48} className="shrink-0" />
           <div className="min-w-0">
             <h1 className="text-xl font-extrabold tracking-tight text-brand-800">
-              Report Duck 2.0
+              Report Duck 2.1
             </h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="inline-block w-6 h-0.5 bg-gold rounded-full" />
@@ -230,7 +212,7 @@ function DutyApp() {
           </div>
         </div>
 
-        {/* Action buttons — same order as 1.0: A-C → D → Clear → Download → Admin */}
+        {/* Action buttons — A-C → D → Download → Admin */}
         <div className="flex items-center gap-1 mt-3">
           <button
             onClick={handleRefreshAC}
@@ -253,15 +235,6 @@ function DutyApp() {
                        focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
           >
             Refresh (D)
-          </button>
-          <button
-            onClick={handleClearAll}
-            className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium whitespace-nowrap
-                       bg-red-50 text-red-600 border border-red-200
-                       hover:bg-red-100 active:scale-[0.97] transition-all
-                       focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-          >
-            Clear
           </button>
           <button
             onClick={handleDownload}
@@ -296,8 +269,7 @@ function DutyApp() {
           <RoomNameBar name={activeName} onRename={handleRename} />
           <EditorField
             roomName={activeName}
-            ytext={activeSession?.ytext ?? null}
-            awareness={activeSession?.awareness ?? null}
+            session={activeSession}
             connected={activeSession?.connected ?? false}
           />
         </div>
@@ -305,7 +277,7 @@ function DutyApp() {
 
       {/* Footer */}
       <footer className="mt-auto px-4 py-3 text-center text-[11px] text-gray-400">
-        Report Duck 2.0 · Changes sync in real-time across all devices
+        Report Duck 2.1 · Changes sync in real-time across all devices
       </footer>
 
       {/* Admin — live overview of all rooms */}

@@ -1,7 +1,7 @@
 {
   "name": "report-duck-2",
-  "version": "2.0.0",
-  "description": "Report Duck 2.0 — 7 rooms, editable room names, real-time sync",
+  "version": "2.1.0",
+  "description": "Report Duck 2.1 — 7 rooms × 3 fields (EOS/Overlapping/Others), editable room names, real-time sync",
   "private": true,
   "scripts": {
     "dev": "next dev",

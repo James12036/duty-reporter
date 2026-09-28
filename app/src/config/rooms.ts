@@ -1,7 +1,8 @@
 /**
- * Report Duck 2.0 — rooms & shift presets.
+ * Report Duck 2.1 — rooms, fields & shift presets.
  *
  * 7 rooms, each backed by its own Yjs room ("room-1" … "room-7").
+ * Every room holds THREE text fields: EOS, Overlapping, Others.
  * Room NAMES are shared state (stored in the meta room's "roomnames" map),
  * so anyone can rename a room by hand and every officer sees the new name.
  */
@@ -28,6 +29,19 @@ export const ROOM_IDS = ROOMS.map((r) => r.id);
 
 export const DEFAULT_ROOM_NAMES = ROOMS.map((r) => r.defaultName);
 
+/**
+ * The three text fields inside every room (2.1).
+ * Sizes relative to the old single field (24vh basis): EOS +25% → 30vh;
+ * Overlapping / Others −⅓ → 16vh.
+ */
+export const ROOM_FIELDS = [
+  { id: "eos", label: "EOS", textareaClass: "h-[30vh] min-h-[160px]" },
+  { id: "overlapping", label: "Overlapping", textareaClass: "h-[16vh] min-h-[85px]" },
+  { id: "others", label: "Others", textareaClass: "h-[16vh] min-h-[85px]" },
+] as const;
+
+export type RoomFieldId = (typeof ROOM_FIELDS)[number]["id"];
+
 /** Room names applied by "Refresh (A-C)" */
 export const AC_ROOM_NAMES = [
   "MP CW",
@@ -41,30 +55,3 @@ export const AC_ROOM_NAMES = [
 
 /** Room names applied by "Refresh (D)" */
 export const D_ROOM_NAMES = ["D", "D2", "D7", "H3", "Other 1", "Other 2", "Other 3"];
-
-/** Rooms that "Refresh (A-C)" fills with the A-C template (the first 5 rooms) */
-export const AC_SEED_ROOM_IDS = ["room-1", "room-2", "room-3", "room-4", "room-5"];
-
-/**
- * Content written into the first 5 rooms by "Refresh (A-C)"
- * (exact contents of Desktop/A-C.rtf).
- */
-export const AC_SEED_CONTENT = `EOS:
-
-
-
-
-
-
-
-————————————
-Overlapping:
-
-
-
-
-
-————————————
-Others:`;
-
-

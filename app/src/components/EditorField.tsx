@@ -1,27 +1,28 @@
 "use client";
 
 /**
- * EditorField — Yjs-synced textarea for a room.
+ * EditorField — three Yjs-synced textareas per room (EOS / Overlapping / Others).
  *
  * Key behaviors:
- *  - The Y.Text is the source of truth (CRDT, no overwrites).
- *  - The textarea is UNCONTROLLED; a diff-based TextareaBinding syncs it, so
- *    remote typing never resets the local scroll position or caret
+ *  - Each field's Y.Text is the source of truth (CRDT, no overwrites).
+ *  - Textareas are UNCONTROLLED; a diff-based TextareaBinding syncs each one,
+ *    so remote typing never resets the local scroll position or caret
  *    (fixes the Report Duck 1.0 "jumps to the top" problem).
+ *  - Per-field sizes come from ROOM_FIELDS (EOS bigger, Overlapping/Others
+ *    smaller) — see rooms.ts.
  *  - Status row has a fixed height and the remote-typing hint fades in/out via
  *    opacity — no layout shifts while someone else is typing.
- *  - Full-height textarea suitable for ~300 words.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type * as Y from "yjs";
-import type { WebsocketProvider } from "y-websocket";
 import { TextareaBinding } from "@/lib/textarea-binding";
+import { ROOM_FIELDS } from "@/config/rooms";
+import type { RoomSession } from "@/lib/yjs";
 
 interface EditorFieldProps {
   roomName: string;
-  ytext: Y.Text | null;
-  awareness: WebsocketProvider["awareness"] | null;
+  session: RoomSession | null;
   connected: boolean;
 }
 
@@ -31,51 +32,20 @@ interface RemoteUser {
   color: string;
 }
 
-function computeWords(value: string): number {
-  return value ? value.trim().split(/\s+/).filter(Boolean).length : 0;
-}
-
-export default function EditorField({
-  roomName,
-  ytext,
-  awareness,
-  connected,
-}: EditorFieldProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [wordCount, setWordCount] = useState(0);
+export default function EditorField({ roomName, session, connected }: EditorFieldProps) {
   const [remoteActivity, setRemoteActivity] = useState(false);
   const [remoteUsers, setRemoteUsers] = useState<RemoteUser[]>([]);
   const activityTimer = useRef<ReturnType<typeof setTimeout>>();
 
-  // ── Bind the textarea to the Y.Text (diff-based, scroll/caret safe) ──
-  useEffect(() => {
-    const elt = textareaRef.current;
-    if (!elt) return;
-
-    if (!ytext) {
-      elt.value = "";
-      setWordCount(0);
-      return;
-    }
-
-    const binding = new TextareaBinding(ytext, elt, {
-      onLocalChange: (value) => setWordCount(computeWords(value)),
-      onRemoteChange: (value) => {
-        setWordCount(computeWords(value));
-        setRemoteActivity(true);
-        if (activityTimer.current) clearTimeout(activityTimer.current);
-        activityTimer.current = setTimeout(() => setRemoteActivity(false), 1200);
-      },
-    });
-    setWordCount(computeWords(elt.value));
-
-    return () => {
-      binding.destroy();
-    };
-  }, [ytext]);
+  const markRemoteActivity = useCallback(() => {
+    setRemoteActivity(true);
+    if (activityTimer.current) clearTimeout(activityTimer.current);
+    activityTimer.current = setTimeout(() => setRemoteActivity(false), 1200);
+  }, []);
 
   // ── Presence: who else is viewing this room ─────────────────────
   useEffect(() => {
+    const awareness = session?.awareness ?? null;
     if (!awareness) {
       setRemoteUsers([]);
       return;
@@ -95,7 +65,7 @@ export default function EditorField({
     return () => {
       awareness.off("change", updateUsers);
     };
-  }, [awareness]);
+  }, [session]);
 
   // ── Cleanup timers on unmount ───────────────────────────────────
   useEffect(() => {
@@ -105,8 +75,8 @@ export default function EditorField({
   }, []);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Status row — fixed height, never reflows the textarea */}
+    <div className="flex flex-col">
+      {/* Status row — fixed height, never reflows the textareas */}
       <div className="flex items-center gap-3 px-4 h-9 text-xs whitespace-nowrap overflow-hidden">
         <div className="flex items-center gap-1.5 shrink-0">
           <span
@@ -151,42 +121,80 @@ export default function EditorField({
         </span>
       </div>
 
-      {/* Textarea (uncontrolled — the binding owns its value) */}
-      <div className="flex-1 px-4 py-3 flex flex-col">
-        <textarea
-          ref={textareaRef}
-          placeholder={ytext ? `Enter details for ${roomName}…` : "Connecting…"}
-          aria-label={roomName}
-          className={`
-            w-full flex-1 min-h-[90vh] p-4 text-base leading-relaxed
-            bg-gray-50/70 border border-gray-200 rounded-xl
-            focus:outline-none focus:ring-2 focus:ring-brand-500/60 focus:border-brand-300 focus:bg-white
-            resize-none transition-colors duration-200
-            placeholder:text-gray-400
-            ${!connected ? "opacity-60" : ""}
-          `}
-        />
-
-        {/* Word count + progress toward ~300 words */}
-        <div className="mt-2.5">
-          <div className="flex justify-between items-center text-xs text-gray-400 mb-1">
-            <span>
-              ~{wordCount} {wordCount === 1 ? "word" : "words"}
-            </span>
-            <span>
-              {connected ? "Changes sync in real-time" : "Reconnecting… changes saved locally"}
-            </span>
-          </div>
-          <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-300 ${
-                wordCount >= 300 ? "bg-green-500" : "bg-brand-400"
-              }`}
-              style={{ width: `${Math.min(100, (wordCount / 300) * 100)}%` }}
-            />
-          </div>
-        </div>
+      {/* Three fields: EOS / Overlapping / Others */}
+      <div className="px-4 pb-4 flex flex-col gap-4">
+        {ROOM_FIELDS.map((field) => (
+          <FieldEditor
+            key={field.id}
+            roomName={roomName}
+            label={field.label}
+            textareaClass={field.textareaClass}
+            ytext={session ? session.fieldText(field.id) : null}
+            connected={connected}
+            onRemoteActivity={markRemoteActivity}
+          />
+        ))}
       </div>
+    </div>
+  );
+}
+
+// ── One synced textarea (a single room field) ────────────────────
+
+interface FieldEditorProps {
+  roomName: string;
+  label: string;
+  textareaClass: string;
+  ytext: Y.Text | null;
+  connected: boolean;
+  onRemoteActivity: () => void;
+}
+
+function FieldEditor({
+  roomName,
+  label,
+  textareaClass,
+  ytext,
+  connected,
+  onRemoteActivity,
+}: FieldEditorProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // ── Bind the textarea to the field's Y.Text (diff-based, scroll/caret safe) ──
+  useEffect(() => {
+    const elt = textareaRef.current;
+    if (!elt) return;
+
+    if (!ytext) {
+      elt.value = "";
+      return;
+    }
+
+    const binding = new TextareaBinding(ytext, elt, {
+      onRemoteChange: () => onRemoteActivity(),
+    });
+
+    return () => {
+      binding.destroy();
+    };
+  }, [ytext, onRemoteActivity]);
+
+  return (
+    <div className="flex flex-col">
+      <span className="block mb-1.5 text-sm font-semibold text-brand-800">{label}</span>
+      <textarea
+        ref={textareaRef}
+        placeholder={ytext ? `Enter ${label} details…` : "Connecting…"}
+        aria-label={`${label} — ${roomName}`}
+        className={`
+          w-full ${textareaClass} p-3.5 text-base leading-relaxed
+          bg-gray-50/70 border border-gray-200 rounded-xl
+          focus:outline-none focus:ring-2 focus:ring-brand-500/60 focus:border-brand-300 focus:bg-white
+          resize-none transition-colors duration-200
+          placeholder:text-gray-400
+          ${!connected ? "opacity-60" : ""}
+        `}
+      />
     </div>
   );
 }

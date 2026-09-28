@@ -1,5 +1,5 @@
 /**
- * Report Duck 2.0 — Unified Server
+ * Report Duck 2.1 — Unified Server
  *
  * Runs both the Next.js frontend and y-websocket sync server on one port.
  * Deploy to Render, Railway, or Fly.io as a single service.
@@ -17,9 +17,10 @@ const PORT = process.env.PORT || 3000;
 
 // ── Pre-create rooms (7 report rooms + shared meta room) ─────────
 const ROOMS = ["room-1", "room-2", "room-3", "room-4", "room-5", "room-6", "room-7", "meta"];
+const FIELDS = ["eos", "overlapping", "others"]; // 2.1: three text fields per room
 ROOMS.forEach((room) => {
   const doc = utils.getYDoc(room, true);
-  doc.getText("content");
+  FIELDS.forEach((field) => doc.getText(field));
   if (room === "meta") {
     doc.getText("refreshAt");
     doc.getMap("roomnames");
@@ -73,9 +74,9 @@ app.prepare().then(() => {
   server.listen(PORT, () => {
     console.log(`
 ╔══════════════════════════════════════════════╗
-║   Report Duck 2.0 — Ready                   ║
+║   Report Duck 2.1 — Ready                   ║
 ║   http://localhost:${PORT}                       ║
-║   7 rooms + meta active                     ║
+║   7 rooms × 3 fields + meta active          ║
 ╚══════════════════════════════════════════════╝
 `);
   });
