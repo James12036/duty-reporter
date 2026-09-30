@@ -32,11 +32,17 @@ export const DEFAULT_ROOM_NAMES = ROOMS.map((r) => r.defaultName);
 /**
  * The three text fields inside every room (2.1).
  * Sizes: EOS 37.5vh (30vh +25%); Overlapping / Others 20.8vh (16vh +30%).
+ * hint = small grey helper text shown next to the field label.
  */
 export const ROOM_FIELDS = [
-  { id: "eos", label: "EOS", textareaClass: "h-[37.5vh] min-h-[200px]" },
-  { id: "overlapping", label: "Overlapping", textareaClass: "h-[20.8vh] min-h-[110px]" },
-  { id: "others", label: "Others", textareaClass: "h-[20.8vh] min-h-[110px]" },
+  { id: "eos", label: "EOS", textareaClass: "h-[37.5vh] min-h-[200px]", hint: "" },
+  { id: "overlapping", label: "Overlapping", textareaClass: "h-[20.8vh] min-h-[110px]", hint: "" },
+  {
+    id: "others",
+    label: "Others",
+    textareaClass: "h-[20.8vh] min-h-[110px]",
+    hint: "(ASGP, MTR Patrol, C/P, etc)",
+  },
 ] as const;
 
 export type RoomFieldId = (typeof ROOM_FIELDS)[number]["id"];

@@ -4,7 +4,7 @@
 
 ## 功能
 
-1. **7 個共享房間**，每間房 3 個文字框：**EOS／Overlapping／Others**（各自獨立實時同步；EOS 較大、Overlapping／Others 較細）
+1. **7 個共享房間**，每間房 3 個文字框：**EOS／Overlapping／Others**（各自獨立實時同步；EOS 較大、Overlapping／Others 較細；Others 標籤旁邊有提示：(ASGP, MTR Patrol, C/P, etc)）
 2. **房間名稱可以人手改** — 撳編輯區右上「✏️ Rename」，改名即時同步畀所有人
 3. **Refresh (A-C)** — 清空所有房間，並改名為：MP CW、SUP CW、MP SKW、SUP SKW、SUP SO、Other 1、Other 2（唔會再自動填入模板內容）
 4. **Refresh (D)** — 清空所有房間，並改名為：D、D2、D7、H3、Other 1、Other 2、Other 3

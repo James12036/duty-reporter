@@ -8,8 +8,7 @@
  *  - Textareas are UNCONTROLLED; a diff-based TextareaBinding syncs each one,
  *    so remote typing never resets the local scroll position or caret
  *    (fixes the Report Duck 1.0 "jumps to the top" problem).
- *  - Per-field sizes come from ROOM_FIELDS (EOS bigger, Overlapping/Others
- *    smaller) — see rooms.ts.
+ *  - Per-field sizes (and optional label hints) come from ROOM_FIELDS.
  *  - Status row has a fixed height and the remote-typing hint fades in/out via
  *    opacity — no layout shifts while someone else is typing.
  */
@@ -128,6 +127,7 @@ export default function EditorField({ roomName, session, connected }: EditorFiel
             key={field.id}
             roomName={roomName}
             label={field.label}
+            hint={field.hint}
             textareaClass={field.textareaClass}
             ytext={session ? session.fieldText(field.id) : null}
             connected={connected}
@@ -144,6 +144,7 @@ export default function EditorField({ roomName, session, connected }: EditorFiel
 interface FieldEditorProps {
   roomName: string;
   label: string;
+  hint: string;
   textareaClass: string;
   ytext: Y.Text | null;
   connected: boolean;
@@ -153,6 +154,7 @@ interface FieldEditorProps {
 function FieldEditor({
   roomName,
   label,
+  hint,
   textareaClass,
   ytext,
   connected,
@@ -181,7 +183,10 @@ function FieldEditor({
 
   return (
     <div className="flex flex-col">
-      <span className="block mb-1.5 text-sm font-semibold text-brand-800">{label}</span>
+      <div className="flex items-baseline gap-2 mb-1.5 min-w-0">
+        <span className="text-sm font-semibold text-brand-800 shrink-0">{label}</span>
+        {hint && <span className="text-xs text-gray-400 leading-snug">{hint}</span>}
+      </div>
       <textarea
         ref={textareaRef}
         placeholder={ytext ? `Enter ${label} details…` : "Connecting…"}
