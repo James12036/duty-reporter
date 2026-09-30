@@ -185,7 +185,7 @@ function FieldEditor({
     <div className="flex flex-col">
       <div className="flex items-baseline gap-2 mb-1.5 min-w-0">
         <span className="text-sm font-semibold text-brand-800 shrink-0">{label}</span>
-        {hint && <span className="text-xs text-gray-400 leading-snug">{hint}</span>}
+        {hint && <span className="text-sm text-gray-400 leading-snug">{hint}</span>}
       </div>
       <textarea
         ref={textareaRef}
