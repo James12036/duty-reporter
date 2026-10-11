@@ -10,6 +10,7 @@
    - **Refresh (D)** — 改名為：D、D2、D7、H3、Other 1、Other 2、Other 3；只顯示 **EOS + Others**（隱藏 Overlapping）
 2. **Others 提示更新** — 改為：(Snap Check, ASGP, MTR Patrol, C/P, etc)
 3. **溫暖色系 + 五粒按鈕** — 介面轉暖象牙色調（`#F7F3EA` 底 + `#FFFDF8` 卡片）；按鈕淺色系：A-B 淡綠／C 淡紫／D 淡橙／Download 淡藍／Admin 淡褐，柔和但清晰易見
+4. **Admin 一鍵複製** — Admin 頁面加咗「📋 Copy All」掣，一撳即複製頁面上睇到嘅全部房間內容（方便直接貼落 WhatsApp／文件）
 
 ## 功能
 
@@ -19,7 +20,7 @@
 4. **Refresh (C)** — 同 A-B 名單，但只顯示 EOS + Others 兩個文字框
 5. **Refresh (D)** — 清空所有房間，並改名為：D、D2、D7、H3、Other 1、Other 2、Other 3（只顯示 EOS + Others 兩個文字框）
 6. **Download** — 一鍵下載全部房間內容（按 EOS／Overlapping／Others 分段）做 .txt
-7. **Admin** — 一個版面實時睇晒 7 間房（唯讀）：有內容嘅文字框先顯示；無內容嘅房顯示「No content yet」
+7. **Admin** — 一個版面實時睇晒 7 間房（唯讀）：有內容嘅文字框先顯示；無內容嘅房顯示「No content yet」；右上角「📋 Copy All」一鍵複製全部內容
 8. **修正打字跳頂問題** — 有其他人同時打字時，唔會再彈返去頂部（改用 diff 式 textarea binding，保留捲軸同游標位置）
 
 登入方式不變：個人 access code + 共用 password。
