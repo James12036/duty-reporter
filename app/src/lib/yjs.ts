@@ -1,17 +1,18 @@
 /**
- * Yjs + y-websocket integration for Report Duck 2.1.
+ * Yjs + y-websocket integration for Report Duck 2.1.1.
  *
  * - One Y.Doc per room ("room-1" … "room-7"); each room holds THREE Y.Text
  *   fields: "eos", "overlapping", "others".
- * - A shared "meta" room holds the last-refresh timestamp and the editable
- *   room names (Y.Map "roomnames") so renames sync to every officer.
- * - Batch operations (Refresh / Clear / Download) open short-lived
+ * - A shared "meta" room holds the last-refresh timestamp, the editable
+ *   room names (Y.Map "roomnames"), and the shift mode ("refreshMode":
+ *   "ac" = show all 3 boxes, "d" = show EOS + Others only).
+ * - Batch operations (Refresh / Download / Admin) open short-lived
  *   connections per room so they always act on server state.
  */
 
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
-import { ROOM_FIELDS } from "@/config/rooms";
+import { ROOM_FIELDS, type RefreshMode } from "@/config/rooms";
 
 /** Auto-detect WebSocket URL from the current page location. */
 function getWsUrl(): string {
@@ -34,6 +35,8 @@ export interface MetaSession {
   doc: Y.Doc;
   refreshAt: Y.Text;
   names: Y.Map<string>;
+  /** Shift mode set by the last Refresh: "ac" = 3 boxes, "d" = EOS + Others. */
+  refreshMode: Y.Text;
   awareness: WebsocketProvider["awareness"];
   connected: boolean;
   onStatus: (cb: (connected: boolean) => void) => () => void;
@@ -126,7 +129,7 @@ export function disconnectAll() {
   sessions.forEach((_, id) => disconnectRoom(id));
 }
 
-// ── Meta room (last refresh + shared room names) ────────────────
+// ── Meta room (last refresh + shared room names + shift mode) ───
 
 function createMetaSession(): SessionEntry {
   const doc = new Y.Doc();
@@ -147,10 +150,16 @@ export function connectMeta(): MetaSession {
     doc: entry.doc,
     refreshAt: entry.doc.getText("refreshAt"),
     names: entry.doc.getMap<string>("roomnames"),
+    refreshMode: entry.doc.getText("refreshMode"),
     awareness: entry.awareness,
     connected: entry.provider.wsconnected,
     onStatus: makeStatusSubscriber(entry),
   };
+}
+
+/** Normalize a raw stored refresh mode (anything other than "d" → "ac"). */
+export function normalizeRefreshMode(raw: string): RefreshMode {
+  return raw.trim() === "d" ? "d" : "ac";
 }
 
 /** Write the last-refresh timestamp into the meta room (sync-safe). */
@@ -225,10 +234,11 @@ export async function clearRoomsContent(roomIds: string[]): Promise<void> {
 }
 
 /**
- * Refresh: clear every field of every room, then apply the shift's room
- * names to all users. (2.1: no template content is written any more.)
+ * Refresh: clear every field of every room, apply the shift's room names to
+ * all users, and set the shift mode (2.1.1: A-C shows all 3 boxes, D shows
+ * EOS + Others only). No template content is written.
  */
-export async function refreshRooms(roomIds: string[], names: string[]): Promise<void> {
+export async function refreshRooms(roomIds: string[], names: string[], mode: RefreshMode): Promise<void> {
   const providers: WebsocketProvider[] = [];
 
   for (const id of roomIds) {
@@ -260,6 +270,9 @@ export async function refreshRooms(roomIds: string[], names: string[]): Promise<
     roomIds.forEach((id, i) => {
       meta.names.set(id, names[i] ?? `Room ${i + 1}`);
     });
+    const modeText = meta.refreshMode;
+    modeText.delete(0, modeText.length);
+    modeText.insert(0, mode);
   }, "refresh-rooms");
 }
 
@@ -345,7 +358,7 @@ export function collectAllContent(roomIds: string[], labels: string[]): Promise<
     // Build formatted output
     const lines: string[] = [];
     const now = new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" });
-    lines.push(`Report Duck 2.1 — ${now}`);
+    lines.push(`Report Duck 2.1.1 — ${now}`);
     lines.push("=".repeat(40));
     lines.push("");
 

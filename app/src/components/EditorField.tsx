@@ -1,7 +1,11 @@
 "use client";
 
 /**
- * EditorField — three Yjs-synced textareas per room (EOS / Overlapping / Others).
+ * EditorField — the room's Yjs-synced textareas.
+ *
+ * Which boxes are shown depends on the shift mode (2.1.1):
+ *  - Refresh (A-C): EOS / Overlapping / Others (all three).
+ *  - Refresh (D): EOS / Others (Overlapping hidden).
  *
  * Key behaviors:
  *  - Each field's Y.Text is the source of truth (CRDT, no overwrites).
@@ -11,18 +15,21 @@
  *  - Per-field sizes (and optional label hints) come from ROOM_FIELDS.
  *  - Status row has a fixed height and the remote-typing hint fades in/out via
  *    opacity — no layout shifts while someone else is typing.
+ *  - Warm ivory palette (2.1.1): #FAF6EE fields on #FFFDF8 cards.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type * as Y from "yjs";
 import { TextareaBinding } from "@/lib/textarea-binding";
-import { ROOM_FIELDS } from "@/config/rooms";
+import type { RoomField } from "@/config/rooms";
 import type { RoomSession } from "@/lib/yjs";
 
 interface EditorFieldProps {
   roomName: string;
   session: RoomSession | null;
   connected: boolean;
+  /** The fields to display (mode-dependent — see MODE_FIELD_IDS). */
+  fields: readonly RoomField[];
 }
 
 interface RemoteUser {
@@ -31,7 +38,7 @@ interface RemoteUser {
   color: string;
 }
 
-export default function EditorField({ roomName, session, connected }: EditorFieldProps) {
+export default function EditorField({ roomName, session, connected, fields }: EditorFieldProps) {
   const [remoteActivity, setRemoteActivity] = useState(false);
   const [remoteUsers, setRemoteUsers] = useState<RemoteUser[]>([]);
   const activityTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -80,16 +87,16 @@ export default function EditorField({ roomName, session, connected }: EditorFiel
         <div className="flex items-center gap-1.5 shrink-0">
           <span
             className={`inline-block w-2 h-2 rounded-full ${
-              connected ? "bg-green-500 animate-pulse" : "bg-gray-300"
+              connected ? "bg-green-500 animate-pulse" : "bg-[#D9D0C0]"
             }`}
           />
-          <span className={connected ? "text-gray-500" : "text-gray-400"}>
+          <span className={connected ? "text-[#91887C]" : "text-[#B1A795]"}>
             {connected ? "Live" : "Connecting…"}
           </span>
         </div>
 
         {remoteUsers.length > 0 && (
-          <div className="flex items-center gap-1 text-gray-500 min-w-0">
+          <div className="flex items-center gap-1 text-[#91887C] min-w-0">
             <span className="shrink-0">•</span>
             <div className="flex -space-x-1 shrink-0">
               {remoteUsers.slice(0, 3).map((u) => (
@@ -120,9 +127,9 @@ export default function EditorField({ roomName, session, connected }: EditorFiel
         </span>
       </div>
 
-      {/* Three fields: EOS / Overlapping / Others */}
+      {/* Visible fields (EOS / Overlapping / Others — mode-dependent) */}
       <div className="px-4 pb-4 flex flex-col gap-4">
-        {ROOM_FIELDS.map((field) => (
+        {fields.map((field) => (
           <FieldEditor
             key={field.id}
             roomName={roomName}
@@ -185,7 +192,7 @@ function FieldEditor({
     <div className="flex flex-col">
       <div className="flex items-baseline gap-2 mb-1.5 min-w-0">
         <span className="text-sm font-semibold text-brand-800 shrink-0">{label}</span>
-        {hint && <span className="text-sm text-gray-400 leading-snug">{hint}</span>}
+        {hint && <span className="text-sm text-[#B1A795] leading-snug">{hint}</span>}
       </div>
       <textarea
         ref={textareaRef}
@@ -193,10 +200,10 @@ function FieldEditor({
         aria-label={`${label} — ${roomName}`}
         className={`
           w-full ${textareaClass} p-3.5 text-base leading-relaxed
-          bg-gray-50/70 border border-gray-200 rounded-xl
-          focus:outline-none focus:ring-2 focus:ring-brand-500/60 focus:border-brand-300 focus:bg-white
+          bg-[#FAF6EE] border border-[#EAE2D2] rounded-xl
+          focus:outline-none focus:ring-2 focus:ring-brand-500/60 focus:border-brand-300 focus:bg-[#FFFDF8]
           resize-none transition-colors duration-200
-          placeholder:text-gray-400
+          placeholder:text-[#A9A092]
           ${!connected ? "opacity-60" : ""}
         `}
       />

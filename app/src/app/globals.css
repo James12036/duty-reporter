@@ -10,7 +10,7 @@ html {
 
 body {
   @apply text-gray-900 antialiased;
-  background-color: #f7f6f3; /* warm paper grey */
+  background-color: #F7F3EA; /* warm ivory paper (2.1.1) */
   /* Safe area insets for notched phones */
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);

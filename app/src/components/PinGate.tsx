@@ -63,28 +63,28 @@ export default function PinGate({ children }: { children: React.ReactNode }) {
   if (status === "checking") {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-400">Loading…</div>
+        <div className="text-[#A79D8D]">Loading…</div>
       </div>
     );
   }
 
   if (status === "locked") {
     return (
-      <div className="flex flex-col min-h-screen max-w-2xl mx-auto w-full bg-[#f7f6f3]">
+      <div className="flex flex-col min-h-screen max-w-2xl mx-auto w-full bg-[#F7F3EA]">
         <div className="h-1 bg-gradient-to-r from-brand-800 via-brand-700 to-brand-500" />
         <div className="flex-1 flex items-center justify-center px-6 py-10">
           <form
             onSubmit={onSubmit}
-            className="w-full max-w-sm bg-white rounded-2xl shadow-[0_1px_3px_rgba(15,28,44,0.08)] border border-gray-100 px-5 py-6"
+            className="w-full max-w-sm bg-[#FFFDF8] rounded-2xl shadow-[0_1px_3px_rgba(15,28,44,0.08)] border border-[#EAE2D2] px-5 py-6"
           >
             <div className="flex flex-col items-center text-center mb-5">
               <DuckLogo size={96} />
               <h1 className="mt-3 text-xl font-extrabold tracking-tight text-brand-800">
-                Report Duck 2.1
+                Report Duck <span className="text-[0.8em]">2.1.1</span>
               </h1>
               <div className="flex items-center gap-2 mt-1">
                 <span className="inline-block w-6 h-0.5 bg-gold rounded-full" />
-                <p className="text-xs text-gray-500">Enter access code and password</p>
+                <p className="text-xs text-[#91887C]">Enter access code and password</p>
               </div>
             </div>
 
@@ -100,7 +100,7 @@ export default function PinGate({ children }: { children: React.ReactNode }) {
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
               placeholder="Access code"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-base tracking-widest
+              className="w-full px-4 py-3 rounded-xl border border-[#E6DDCB] bg-[#FFFDF8] text-base tracking-widest
                          focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
             />
 
@@ -114,7 +114,7 @@ export default function PinGate({ children }: { children: React.ReactNode }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="mt-3 w-full px-4 py-3 rounded-xl border border-gray-200 text-base
+              className="mt-3 w-full px-4 py-3 rounded-xl border border-[#E6DDCB] bg-[#FFFDF8] text-base
                          focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
             />
 

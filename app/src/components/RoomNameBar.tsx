@@ -57,7 +57,7 @@ export default function RoomNameBar({ name, onRename }: RoomNameBarProps) {
             }}
             placeholder="Room name"
             aria-label="Room name"
-            className="flex-1 min-w-0 px-2.5 py-1.5 text-sm font-semibold rounded-lg border border-gray-300
+            className="flex-1 min-w-0 px-2.5 py-1.5 text-sm font-semibold rounded-lg border border-[#E6DDCB] bg-[#FFFDF8]
                        focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-300"
           />
           <button
@@ -72,9 +72,9 @@ export default function RoomNameBar({ name, onRename }: RoomNameBarProps) {
           <button
             onClick={cancel}
             className="shrink-0 px-2 py-1 rounded-md text-[11px] font-medium
-                       bg-gray-50 text-gray-600 border border-gray-200
-                       hover:bg-gray-100 active:scale-[0.97] transition-all
-                       focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                       bg-[#FAF6EC] text-[#7C7263] border border-[#E6DDCB]
+                       hover:bg-[#F3EDDF] active:scale-[0.97] transition-all
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9BFAE]"
           >
             Cancel
           </button>
@@ -85,9 +85,9 @@ export default function RoomNameBar({ name, onRename }: RoomNameBarProps) {
           <button
             onClick={() => setEditing(true)}
             className="shrink-0 px-2 py-1 rounded-md text-[11px] font-medium
-                       bg-brand-50 text-brand-700 border border-brand-200
-                       hover:bg-brand-100 active:scale-[0.97] transition-all
-                       focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                       bg-[#FAF6EC] text-[#7C7263] border border-[#E6DDCB]
+                       hover:bg-[#F3EDDF] active:scale-[0.97] transition-all
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9BFAE]"
           >
             ✏️ Rename
           </button>

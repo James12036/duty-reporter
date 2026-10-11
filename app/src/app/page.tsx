@@ -1,14 +1,15 @@
 "use client";
 
 /**
- * Report Duck 2.1 — Main Page
+ * Report Duck 2.1.1 — Main Page
  *
- * - 7 shared rooms ("room-1" … "room-7"), each its own Yjs room with three
- *   text fields (EOS / Overlapping / Others) inside EditorField.
+ * - 7 shared rooms ("room-1" … "room-7"), each its own Yjs room; the room
+ *   editor shows text fields (EOS / Overlapping / Others).
  * - Room names are editable by hand (✏️ Rename) and shared with everyone.
- * - Refresh (A-C) / Refresh (D) clear all rooms and rename them to the
- *   shift's preset names (no template content is written).
+ * - Refresh (A-C): clear all rooms, rename, show all 3 boxes.
+ *   Refresh (D): clear all rooms, rename, show EOS + Others only (2.1.1).
  * - Admin opens a live, read-only overview of all rooms at once.
+ * - Warm ivory palette (2.1.1): #F7F3EA canvas, #FFFDF8 cards.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -21,10 +22,13 @@ import DuckLogo from "@/components/DuckLogo";
 import {
   ROOMS,
   ROOM_IDS,
+  ROOM_FIELDS,
   DEFAULT_ROOM_NAMES,
   AC_ROOM_NAMES,
   D_ROOM_NAMES,
+  MODE_FIELD_IDS,
 } from "@/config/rooms";
+import type { RefreshMode } from "@/config/rooms";
 import {
   connectRoom,
   disconnectRoom,
@@ -35,6 +39,7 @@ import {
   connectMeta,
   writeRefreshTimestamp,
   setRoomName,
+  normalizeRefreshMode,
 } from "@/lib/yjs";
 import type { RoomSession } from "@/lib/yjs";
 
@@ -50,6 +55,7 @@ function DutyApp() {
   const [activeRoom, setActiveRoom] = useState(ROOMS[0].id);
   const [session, setSession] = useState<RoomSession | null>(null);
   const [roomNames, setRoomNames] = useState<string[]>(DEFAULT_ROOM_NAMES);
+  const [refreshMode, setRefreshMode] = useState<RefreshMode>("ac");
   const [mounted, setMounted] = useState(false);
   const [busyRefresh, setBusyRefresh] = useState(false);
   const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
@@ -60,7 +66,7 @@ function DutyApp() {
     setMounted(true);
   }, []);
 
-  // ── Shared meta state: last refresh + room names ──────────────
+  // ── Shared meta state: last refresh + room names + shift mode ─
   useEffect(() => {
     if (!mounted) return;
 
@@ -80,14 +86,19 @@ function DutyApp() {
 
     const onNames = () => setRoomNames(readNames());
 
+    const onMode = () => setRefreshMode(normalizeRefreshMode(meta.refreshMode.toString()));
+
     onRefreshAt();
     meta.refreshAt.observe(onRefreshAt);
     onNames();
     meta.names.observe(onNames);
+    onMode();
+    meta.refreshMode.observe(onMode);
 
     return () => {
       meta.refreshAt.unobserve(onRefreshAt);
       meta.names.unobserve(onNames);
+      meta.refreshMode.unobserve(onMode);
     };
   }, [mounted]);
 
@@ -134,8 +145,9 @@ function DutyApp() {
     if (!ok) return;
     setBusyRefresh(true);
     try {
-      await refreshRooms(ROOM_IDS, [...AC_ROOM_NAMES]);
+      await refreshRooms(ROOM_IDS, [...AC_ROOM_NAMES], "ac");
       setRoomNames([...AC_ROOM_NAMES]);
+      setRefreshMode("ac");
       const ts = Date.now();
       setLastRefreshAt(ts);
       writeRefreshTimestamp(String(ts)).catch(() => {});
@@ -145,16 +157,18 @@ function DutyApp() {
   }, []);
 
   // ── Refresh (D): clear all rooms, rename to the D set ─────────
+  //    (2.1.1: the Overlapping box is hidden in D mode)
   const handleRefreshD = useCallback(async () => {
     if (typeof window === "undefined") return;
     const ok = window.confirm(
-      `Refresh (D)?\n\nThis will clear ALL 7 rooms for everyone, then name the rooms:\n${D_ROOM_NAMES.join(", ")}.`
+      `Refresh (D)?\n\nThis will clear ALL 7 rooms for everyone, then name the rooms:\n${D_ROOM_NAMES.join(", ")}.\n\nThe Overlapping box will be hidden — only EOS and Others are shown — until Refresh (A-C) is used.`
     );
     if (!ok) return;
     setBusyRefresh(true);
     try {
-      await refreshRooms(ROOM_IDS, [...D_ROOM_NAMES]);
+      await refreshRooms(ROOM_IDS, [...D_ROOM_NAMES], "d");
       setRoomNames([...D_ROOM_NAMES]);
+      setRefreshMode("d");
       const ts = Date.now();
       setLastRefreshAt(ts);
       writeRefreshTimestamp(String(ts)).catch(() => {});
@@ -174,16 +188,19 @@ function DutyApp() {
   const activeName = roomNames[activeIndex] || ROOMS[activeIndex].defaultName;
   const activeSession = session && session.roomId === activeRoom ? session : null;
 
+  // Which boxes to show this shift (2.1.1: D mode hides Overlapping)
+  const visibleFields = ROOM_FIELDS.filter((f) => MODE_FIELD_IDS[refreshMode].includes(f.id));
+
   if (!mounted) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-gray-400">Loading…</div>
+      <div className="flex items-center justify-center min-h-screen bg-[#F7F3EA]">
+        <div className="text-[#A79D8D]">Loading…</div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen max-w-2xl mx-auto w-full bg-[#f7f6f3]">
+    <div className="flex flex-col min-h-screen max-w-2xl mx-auto w-full bg-[#F7F3EA]">
       {/* Navy top band */}
       <div className="h-1 bg-gradient-to-r from-brand-800 via-brand-700 to-brand-500" />
 
@@ -193,11 +210,11 @@ function DutyApp() {
           <DuckLogo size={48} className="shrink-0" />
           <div className="min-w-0">
             <h1 className="text-xl font-extrabold tracking-tight text-brand-800">
-              Report Duck 2.1
+              Report Duck <span className="text-[0.8em]">2.1.1</span>
             </h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="inline-block w-6 h-0.5 bg-gold rounded-full" />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-[#91887C]">
                 {lastRefreshAt
                   ? `Last refresh: ${new Date(lastRefreshAt).toLocaleString("en-GB", {
                       day: "2-digit",
@@ -212,45 +229,45 @@ function DutyApp() {
           </div>
         </div>
 
-        {/* Action buttons — A-C → D → Download → Admin */}
+        {/* Action buttons — A-C → D → Download → Admin (warm solid set, 2.1.1) */}
         <div className="flex items-center gap-1 mt-3">
           <button
             onClick={handleRefreshAC}
             disabled={busyRefresh}
-            className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium whitespace-nowrap
-                       bg-emerald-50 text-emerald-800 border border-emerald-200
-                       hover:bg-emerald-100 active:scale-[0.97] transition-all
+            className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap
+                       bg-[#5B7232] text-white border border-[#4A5D28] shadow-sm
+                       hover:bg-[#4E6229] active:scale-[0.97] transition-all
                        disabled:opacity-50 disabled:active:scale-100
-                       focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A9BC80]"
           >
             Refresh (A-C)
           </button>
           <button
             onClick={handleRefreshD}
             disabled={busyRefresh}
-            className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium whitespace-nowrap
-                       bg-amber-50 text-amber-800 border border-amber-200
-                       hover:bg-amber-100 active:scale-[0.97] transition-all
+            className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap
+                       bg-[#EA580C] text-white border border-[#C2410C] shadow-sm
+                       hover:bg-[#C2410C] active:scale-[0.97] transition-all
                        disabled:opacity-50 disabled:active:scale-100
-                       focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FDBA74]"
           >
             Refresh (D)
           </button>
           <button
             onClick={handleDownload}
-            className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium whitespace-nowrap
-                       bg-brand-50 text-brand-700 border border-brand-200
-                       hover:bg-brand-100 active:scale-[0.97] transition-all
-                       focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap
+                       bg-[#1E3A5F] text-white border border-[#16293F] shadow-sm
+                       hover:bg-[#16293F] active:scale-[0.97] transition-all
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92AED1]"
           >
             Download
           </button>
           <button
             onClick={() => setShowAdmin(true)}
-            className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium whitespace-nowrap
-                       bg-slate-50 text-slate-700 border border-slate-200
-                       hover:bg-slate-100 active:scale-[0.97] transition-all
-                       focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
+            className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap
+                       bg-[#6B5E4E] text-white border border-[#574B3C] shadow-sm
+                       hover:bg-[#574B3C] active:scale-[0.97] transition-all
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9BFAE]"
           >
             Admin
           </button>
@@ -260,24 +277,25 @@ function DutyApp() {
       {/* Room Tabs */}
       <RoomTabs activeId={activeRoom} names={roomNames} onSelect={setActiveRoom} />
 
-      {/* Editor — card on warm-grey canvas, fade-in on tab switch */}
+      {/* Editor — card on warm ivory canvas, fade-in on tab switch */}
       <main className="flex-1 px-3 py-3">
         <div
           key={activeRoom}
-          className="h-full bg-white rounded-2xl shadow-[0_1px_3px_rgba(15,28,44,0.08)] border border-gray-100 animate-fade-slide overflow-hidden"
+          className="h-full bg-[#FFFDF8] rounded-2xl shadow-[0_1px_3px_rgba(15,28,44,0.08)] border border-[#EAE2D2] animate-fade-slide overflow-hidden"
         >
           <RoomNameBar name={activeName} onRename={handleRename} />
           <EditorField
             roomName={activeName}
             session={activeSession}
             connected={activeSession?.connected ?? false}
+            fields={visibleFields}
           />
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto px-4 py-3 text-center text-[11px] text-gray-400">
-        Report Duck 2.1 · Changes sync in real-time across all devices
+      <footer className="mt-auto px-4 py-3 text-center text-[11px] text-[#A79D8D]">
+        Report Duck 2.1.1 · Changes sync in real-time across all devices
       </footer>
 
       {/* Admin — live overview of all rooms */}

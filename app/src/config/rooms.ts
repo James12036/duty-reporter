@@ -1,5 +1,5 @@
 /**
- * Report Duck 2.1 — rooms, fields & shift presets.
+ * Report Duck 2.1.1 — rooms, fields & shift presets.
  *
  * 7 rooms, each backed by its own Yjs room ("room-1" … "room-7").
  * Every room holds THREE text fields: EOS, Overlapping, Others.
@@ -30,7 +30,7 @@ export const ROOM_IDS = ROOMS.map((r) => r.id);
 export const DEFAULT_ROOM_NAMES = ROOMS.map((r) => r.defaultName);
 
 /**
- * The three text fields inside every room (2.1).
+ * The three text fields inside every room (2.1.1).
  * Sizes: EOS 37.5vh (30vh +25%); Overlapping / Others 20.8vh (16vh +30%).
  * hint = small grey helper text shown next to the field label.
  */
@@ -41,11 +41,25 @@ export const ROOM_FIELDS = [
     id: "others",
     label: "Others",
     textareaClass: "h-[20.8vh] min-h-[110px]",
-    hint: "(ASGP, MTR Patrol, C/P, etc)",
+    hint: "(Snap Check, ASGP, MTR Patrol, C/P, etc)",
   },
 ] as const;
 
-export type RoomFieldId = (typeof ROOM_FIELDS)[number]["id"];
+export type RoomField = (typeof ROOM_FIELDS)[number];
+export type RoomFieldId = RoomField["id"];
+
+/**
+ * Which text boxes each shift shows (2.1.1):
+ *  - Refresh (A-C): all three fields.
+ *  - Refresh (D): EOS + Others only (Overlapping hidden).
+ * Stored in the meta room as the "refreshMode" text so it syncs to everyone.
+ */
+export type RefreshMode = "ac" | "d";
+
+export const MODE_FIELD_IDS: Record<RefreshMode, readonly RoomFieldId[]> = {
+  ac: ["eos", "overlapping", "others"],
+  d: ["eos", "others"],
+};
 
 /** Room names applied by "Refresh (A-C)" */
 export const AC_ROOM_NAMES = [

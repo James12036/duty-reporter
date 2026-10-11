@@ -6,6 +6,7 @@
  * - Text boxes with content are shown; empty boxes are hidden.
  * - Rooms with no content at all are still listed, marked "No content yet".
  * Uses silent observer connections (no presence shown in any room).
+ * Warm ivory palette (2.1.1).
  */
 
 import { useEffect, useState } from "react";
@@ -27,19 +28,19 @@ export default function AdminView({ roomIds, roomNames, onClose }: AdminViewProp
   }, [roomIds]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#f7f6f3]">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#F7F3EA]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+      <div className="flex items-center justify-between px-4 py-3 bg-[#FFFDF8] border-b border-[#EAE2D2]">
         <div className="flex items-baseline gap-2 min-w-0">
           <h2 className="text-lg font-extrabold tracking-tight text-brand-800">Admin</h2>
-          <span className="text-[11px] text-gray-500 truncate">All rooms · live</span>
+          <span className="text-[11px] text-[#91887C] truncate">All rooms · live</span>
         </div>
         <button
           onClick={onClose}
           className="px-3 py-1.5 rounded-md text-xs font-medium
-                     bg-gray-100 text-gray-700 border border-gray-200
-                     hover:bg-gray-200 active:scale-[0.97] transition-all
-                     focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                     bg-[#FAF6EC] text-[#7C7263] border border-[#E6DDCB]
+                     hover:bg-[#F3EDDF] active:scale-[0.97] transition-all
+                     focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9BFAE]"
         >
           ✕ Close
         </button>
@@ -55,22 +56,22 @@ export default function AdminView({ roomIds, roomNames, onClose }: AdminViewProp
           return (
             <section
               key={id}
-              className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_3px_rgba(15,28,44,0.08)] overflow-hidden"
+              className="bg-[#FFFDF8] rounded-2xl border border-[#EAE2D2] shadow-[0_1px_3px_rgba(15,28,44,0.08)] overflow-hidden"
             >
-              <header className="px-4 py-2 border-b border-gray-100 bg-gray-50/70">
+              <header className="px-4 py-2 border-b border-[#EFE8DA] bg-[#FAF6EE]">
                 <h3 className="text-sm font-bold text-brand-800 truncate">{roomNames[i] ?? id}</h3>
               </header>
 
               {nonEmpty.length === 0 ? (
-                <div className="px-4 py-3 text-[13px] italic text-gray-300">No content yet</div>
+                <div className="px-4 py-3 text-[13px] italic text-[#C6BCAA]">No content yet</div>
               ) : (
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-[#EFE8DA]">
                   {nonEmpty.map((field) => (
                     <div key={field.id} className="px-4 py-3">
                       <span className="block mb-1 text-xs font-semibold text-brand-700">
                         {field.label}
                       </span>
-                      <pre className="text-[13px] leading-relaxed text-gray-800 whitespace-pre-wrap break-words font-sans">
+                      <pre className="text-[13px] leading-relaxed text-[#3B352B] whitespace-pre-wrap break-words font-sans">
                         {contents[id][field.id]}
                       </pre>
                     </div>
@@ -83,7 +84,7 @@ export default function AdminView({ roomIds, roomNames, onClose }: AdminViewProp
       </div>
 
       {/* Footer hint */}
-      <div className="px-4 py-2 text-center text-[11px] text-gray-400 border-t border-gray-100 bg-white/70">
+      <div className="px-4 py-2 text-center text-[11px] text-[#A79D8D] border-t border-[#EAE2D2] bg-[#FFFDF8]/70">
         Read-only · updates in real-time
       </div>
     </div>

@@ -3,6 +3,7 @@
 /**
  * RoomTabs — Horizontal scrollable tab bar for the 7 rooms.
  * Labels are the shared, editable room names (fall back to "Room N").
+ * Warm ivory palette (2.1.1).
  */
 
 import { ROOMS } from "@/config/rooms";
@@ -15,7 +16,7 @@ interface RoomTabsProps {
 
 export default function RoomTabs({ activeId, names, onSelect }: RoomTabsProps) {
   return (
-    <nav className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
+    <nav className="sticky top-0 z-20 bg-[#F7F3EA]/95 backdrop-blur-sm border-b border-[#EAE2D2] shadow-sm">
       <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide px-2 py-2 gap-1">
         {ROOMS.map((room, i) => {
           const isActive = activeId === room.id;
@@ -32,7 +33,7 @@ export default function RoomTabs({ activeId, names, onSelect }: RoomTabsProps) {
                 ${
                   isActive
                     ? `${room.active} shadow-sm`
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    : "border-transparent text-[#8A8174] hover:text-[#5D564B] hover:bg-[#EFE8DA]"
                 }
               `}
             >
