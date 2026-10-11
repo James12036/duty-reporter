@@ -6,8 +6,9 @@
  * - 7 shared rooms ("room-1" … "room-7"), each its own Yjs room; the room
  *   editor shows text fields (EOS / Overlapping / Others).
  * - Room names are editable by hand (✏️ Rename) and shared with everyone.
- * - Refresh (A-C): clear all rooms, rename, show all 3 boxes.
- *   Refresh (D): clear all rooms, rename, show EOS + Others only (2.1.1).
+ * - Refresh (A-B): clear all rooms, rename, show all 3 boxes.
+ *   Refresh (C): clear all rooms, rename (same set), show EOS + Others only.
+ *   Refresh (D): clear all rooms, rename (D set), show EOS + Others only (2.1.1).
  * - Admin opens a live, read-only overview of all rooms at once.
  * - Warm ivory palette (2.1.1): #F7F3EA canvas, #FFFDF8 cards.
  */
@@ -24,7 +25,7 @@ import {
   ROOM_IDS,
   ROOM_FIELDS,
   DEFAULT_ROOM_NAMES,
-  AC_ROOM_NAMES,
+  AB_ROOM_NAMES,
   D_ROOM_NAMES,
   MODE_FIELD_IDS,
 } from "@/config/rooms";
@@ -55,7 +56,7 @@ function DutyApp() {
   const [activeRoom, setActiveRoom] = useState(ROOMS[0].id);
   const [session, setSession] = useState<RoomSession | null>(null);
   const [roomNames, setRoomNames] = useState<string[]>(DEFAULT_ROOM_NAMES);
-  const [refreshMode, setRefreshMode] = useState<RefreshMode>("ac");
+  const [refreshMode, setRefreshMode] = useState<RefreshMode>("ab");
   const [mounted, setMounted] = useState(false);
   const [busyRefresh, setBusyRefresh] = useState(false);
   const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
@@ -136,18 +137,15 @@ function DutyApp() {
     [activeRoom]
   );
 
-  // ── Refresh (A-C): clear all rooms, rename to the A-C set ─────
-  const handleRefreshAC = useCallback(async () => {
+  // ── Refresh family (2.1.1): confirm → clear + rename + set mode ─
+  const runRefresh = useCallback(async (names: string[], mode: RefreshMode, message: string) => {
     if (typeof window === "undefined") return;
-    const ok = window.confirm(
-      `Refresh (A-C)?\n\nThis will clear ALL 7 rooms for everyone, then name the rooms:\n${AC_ROOM_NAMES.join(", ")}.`
-    );
-    if (!ok) return;
+    if (!window.confirm(message)) return;
     setBusyRefresh(true);
     try {
-      await refreshRooms(ROOM_IDS, [...AC_ROOM_NAMES], "ac");
-      setRoomNames([...AC_ROOM_NAMES]);
-      setRefreshMode("ac");
+      await refreshRooms(ROOM_IDS, [...names], mode);
+      setRoomNames([...names]);
+      setRefreshMode(mode);
       const ts = Date.now();
       setLastRefreshAt(ts);
       writeRefreshTimestamp(String(ts)).catch(() => {});
@@ -156,26 +154,38 @@ function DutyApp() {
     }
   }, []);
 
-  // ── Refresh (D): clear all rooms, rename to the D set ─────────
-  //    (2.1.1: the Overlapping box is hidden in D mode)
-  const handleRefreshD = useCallback(async () => {
-    if (typeof window === "undefined") return;
-    const ok = window.confirm(
-      `Refresh (D)?\n\nThis will clear ALL 7 rooms for everyone, then name the rooms:\n${D_ROOM_NAMES.join(", ")}.\n\nThe Overlapping box will be hidden — only EOS and Others are shown — until Refresh (A-C) is used.`
-    );
-    if (!ok) return;
-    setBusyRefresh(true);
-    try {
-      await refreshRooms(ROOM_IDS, [...D_ROOM_NAMES], "d");
-      setRoomNames([...D_ROOM_NAMES]);
-      setRefreshMode("d");
-      const ts = Date.now();
-      setLastRefreshAt(ts);
-      writeRefreshTimestamp(String(ts)).catch(() => {});
-    } finally {
-      setBusyRefresh(false);
-    }
-  }, []);
+  // ── Refresh (A-B): clear all rooms, rename to the A-B set (3 boxes)
+  const handleRefreshAB = useCallback(
+    () =>
+      runRefresh(
+        AB_ROOM_NAMES,
+        "ab",
+        `Refresh (A-B)?\n\nThis will clear ALL 7 rooms for everyone, then name the rooms:\n${AB_ROOM_NAMES.join(", ")}.`
+      ),
+    [runRefresh]
+  );
+
+  // ── Refresh (C): same names as A-B, but only EOS + Others (2.1.1)
+  const handleRefreshC = useCallback(
+    () =>
+      runRefresh(
+        AB_ROOM_NAMES,
+        "c",
+        `Refresh (C)?\n\nThis will clear ALL 7 rooms for everyone, then name the rooms:\n${AB_ROOM_NAMES.join(", ")}.\n\nThe Overlapping box will be hidden — only EOS and Others are shown — until Refresh (A-B) is used.`
+      ),
+    [runRefresh]
+  );
+
+  // ── Refresh (D): clear all rooms, rename to the D set (EOS + Others)
+  const handleRefreshD = useCallback(
+    () =>
+      runRefresh(
+        D_ROOM_NAMES,
+        "d",
+        `Refresh (D)?\n\nThis will clear ALL 7 rooms for everyone, then name the rooms:\n${D_ROOM_NAMES.join(", ")}.\n\nThe Overlapping box will be hidden — only EOS and Others are shown — until Refresh (A-B) is used.`
+      ),
+    [runRefresh]
+  );
 
   // ── Download all rooms' content as .txt ───────────────────────
   const handleDownload = useCallback(async () => {
@@ -188,7 +198,7 @@ function DutyApp() {
   const activeName = roomNames[activeIndex] || ROOMS[activeIndex].defaultName;
   const activeSession = session && session.roomId === activeRoom ? session : null;
 
-  // Which boxes to show this shift (2.1.1: D mode hides Overlapping)
+  // Which boxes to show this shift (2.1.1: C and D modes hide Overlapping)
   const visibleFields = ROOM_FIELDS.filter((f) => MODE_FIELD_IDS[refreshMode].includes(f.id));
 
   if (!mounted) {
@@ -229,10 +239,10 @@ function DutyApp() {
           </div>
         </div>
 
-        {/* Action buttons — A-C → D → Download → Admin (light warm set, 2.1.1) */}
-        <div className="flex items-center gap-1 mt-3">
+        {/* Action buttons — A-B → C → D → Download → Admin (light warm set, 2.1.1) */}
+        <div className="flex flex-wrap items-center gap-1 mt-3">
           <button
-            onClick={handleRefreshAC}
+            onClick={handleRefreshAB}
             disabled={busyRefresh}
             className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap
                        bg-[#E3EBCB] text-[#4A5D28] border border-[#C4D3A0]
@@ -240,7 +250,18 @@ function DutyApp() {
                        disabled:opacity-50 disabled:active:scale-100
                        focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A9BC80]"
           >
-            Refresh (A-C)
+            Refresh (A-B)
+          </button>
+          <button
+            onClick={handleRefreshC}
+            disabled={busyRefresh}
+            className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap
+                       bg-[#E9E0EF] text-[#5B4370] border border-[#D1C1DC]
+                       hover:bg-[#DFD3E8] active:scale-[0.97] transition-all
+                       disabled:opacity-50 disabled:active:scale-100
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-[#B8A5C9]"
+          >
+            Refresh (C)
           </button>
           <button
             onClick={handleRefreshD}

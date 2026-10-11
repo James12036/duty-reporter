@@ -50,19 +50,21 @@ export type RoomFieldId = RoomField["id"];
 
 /**
  * Which text boxes each shift shows (2.1.1):
- *  - Refresh (A-C): all three fields.
+ *  - Refresh (A-B): all three fields.
+ *  - Refresh (C): EOS + Others only (Overlapping hidden).
  *  - Refresh (D): EOS + Others only (Overlapping hidden).
  * Stored in the meta room as the "refreshMode" text so it syncs to everyone.
  */
-export type RefreshMode = "ac" | "d";
+export type RefreshMode = "ab" | "c" | "d";
 
 export const MODE_FIELD_IDS: Record<RefreshMode, readonly RoomFieldId[]> = {
-  ac: ["eos", "overlapping", "others"],
+  ab: ["eos", "overlapping", "others"],
+  c: ["eos", "others"],
   d: ["eos", "others"],
 };
 
-/** Room names applied by "Refresh (A-C)" */
-export const AC_ROOM_NAMES = [
+/** Room names applied by "Refresh (A-B)" (and, with fewer boxes, "Refresh (C)") */
+export const AB_ROOM_NAMES = [
   "MP CW",
   "SUP CW",
   "MP SKW",

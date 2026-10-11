@@ -4,8 +4,8 @@
  * EditorField — the room's Yjs-synced textareas.
  *
  * Which boxes are shown depends on the shift mode (2.1.1):
- *  - Refresh (A-C): EOS / Overlapping / Others (all three).
- *  - Refresh (D): EOS / Others (Overlapping hidden).
+ *  - Refresh (A-B): EOS / Overlapping / Others (all three).
+ *  - Refresh (C) / Refresh (D): EOS / Others (Overlapping hidden).
  *
  * Key behaviors:
  *  - Each field's Y.Text is the source of truth (CRDT, no overwrites).

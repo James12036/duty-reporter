@@ -5,7 +5,7 @@
  *   fields: "eos", "overlapping", "others".
  * - A shared "meta" room holds the last-refresh timestamp, the editable
  *   room names (Y.Map "roomnames"), and the shift mode ("refreshMode":
- *   "ac" = show all 3 boxes, "d" = show EOS + Others only).
+ *   "ab" = show all 3 boxes, "c"/"d" = show EOS + Others only).
  * - Batch operations (Refresh / Download / Admin) open short-lived
  *   connections per room so they always act on server state.
  */
@@ -35,7 +35,7 @@ export interface MetaSession {
   doc: Y.Doc;
   refreshAt: Y.Text;
   names: Y.Map<string>;
-  /** Shift mode set by the last Refresh: "ac" = 3 boxes, "d" = EOS + Others. */
+  /** Shift mode set by the last Refresh: "ab" = 3 boxes, "c"/"d" = EOS + Others. */
   refreshMode: Y.Text;
   awareness: WebsocketProvider["awareness"];
   connected: boolean;
@@ -157,9 +157,12 @@ export function connectMeta(): MetaSession {
   };
 }
 
-/** Normalize a raw stored refresh mode (anything other than "d" → "ac"). */
+/** Normalize a raw stored refresh mode (legacy "ac" / anything unknown → "ab"). */
 export function normalizeRefreshMode(raw: string): RefreshMode {
-  return raw.trim() === "d" ? "d" : "ac";
+  const v = raw.trim();
+  if (v === "c") return "c";
+  if (v === "d") return "d";
+  return "ab";
 }
 
 /** Write the last-refresh timestamp into the meta room (sync-safe). */
@@ -235,8 +238,9 @@ export async function clearRoomsContent(roomIds: string[]): Promise<void> {
 
 /**
  * Refresh: clear every field of every room, apply the shift's room names to
- * all users, and set the shift mode (2.1.1: A-C shows all 3 boxes, D shows
- * EOS + Others only). No template content is written.
+ * all users, and set the shift mode (2.1.1: A-B shows all 3 boxes; C shows
+ * EOS + Others with the A-B names; D shows EOS + Others with the D names).
+ * No template content is written.
  */
 export async function refreshRooms(roomIds: string[], names: string[], mode: RefreshMode): Promise<void> {
   const providers: WebsocketProvider[] = [];
