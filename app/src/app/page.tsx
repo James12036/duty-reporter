@@ -229,14 +229,14 @@ function DutyApp() {
           </div>
         </div>
 
-        {/* Action buttons — A-C → D → Download → Admin (warm solid set, 2.1.1) */}
+        {/* Action buttons — A-C → D → Download → Admin (light warm set, 2.1.1) */}
         <div className="flex items-center gap-1 mt-3">
           <button
             onClick={handleRefreshAC}
             disabled={busyRefresh}
             className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap
-                       bg-[#5B7232] text-white border border-[#4A5D28] shadow-sm
-                       hover:bg-[#4E6229] active:scale-[0.97] transition-all
+                       bg-[#E3EBCB] text-[#4A5D28] border border-[#C4D3A0]
+                       hover:bg-[#D8E2BB] active:scale-[0.97] transition-all
                        disabled:opacity-50 disabled:active:scale-100
                        focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A9BC80]"
           >
@@ -246,18 +246,18 @@ function DutyApp() {
             onClick={handleRefreshD}
             disabled={busyRefresh}
             className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap
-                       bg-[#EA580C] text-white border border-[#C2410C] shadow-sm
-                       hover:bg-[#C2410C] active:scale-[0.97] transition-all
+                       bg-[#FFE2C7] text-[#A8430F] border border-[#F2AE7C]
+                       hover:bg-[#FFD6B0] active:scale-[0.97] transition-all
                        disabled:opacity-50 disabled:active:scale-100
-                       focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FDBA74]"
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5B183]"
           >
             Refresh (D)
           </button>
           <button
             onClick={handleDownload}
             className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap
-                       bg-[#1E3A5F] text-white border border-[#16293F] shadow-sm
-                       hover:bg-[#16293F] active:scale-[0.97] transition-all
+                       bg-[#DCE7F3] text-[#1E3A5F] border border-[#B3C9E0]
+                       hover:bg-[#CFDEED] active:scale-[0.97] transition-all
                        focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92AED1]"
           >
             Download
@@ -265,8 +265,8 @@ function DutyApp() {
           <button
             onClick={() => setShowAdmin(true)}
             className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap
-                       bg-[#6B5E4E] text-white border border-[#574B3C] shadow-sm
-                       hover:bg-[#574B3C] active:scale-[0.97] transition-all
+                       bg-[#EAE3D6] text-[#574B3C] border border-[#CDBFA9]
+                       hover:bg-[#DFD6C4] active:scale-[0.97] transition-all
                        focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9BFAE]"
           >
             Admin

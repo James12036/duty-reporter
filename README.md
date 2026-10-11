@@ -6,7 +6,7 @@
 
 1. **Refresh (D) 模式** — 按下後每間房只顯示 **EOS + Others** 兩個文字框（隱藏 Overlapping），模式即時同步畀所有人；**Refresh (A-C) 照舊顯示 3 個文字框**
 2. **Others 提示更新** — 改為：(Snap Check, ASGP, MTR Patrol, C/P, etc)
-3. **溫暖色系 + 按鈕重新設計** — 介面轉暖象牙色調（`#F7F3EA` 底 + `#FFFDF8` 卡片）；四粒按鈕改為實色設計：Refresh (A-C) 橄欖綠、Refresh (D) 鮮橙、Download 深海藍、Admin 暖褐，喺米黃底上清晰易見
+3. **溫暖色系 + 按鈕重新設計** — 介面轉暖象牙色調（`#F7F3EA` 底 + `#FFFDF8` 卡片）；四粒按鈕改為淡色系設計：Refresh (A-C) 淡橄欖綠、Refresh (D) 淡橙、Download 淡藍、Admin 淡暖褐，柔和但清晰易見
 
 ## 功能
 
