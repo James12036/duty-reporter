@@ -1,16 +1,18 @@
 "use client";
 
 /**
- * Report Duck 2.1.1 — Main Page
+ * Report Duck 2.1.2 — Main Page
  *
  * - 7 shared rooms ("room-1" … "room-7"), each its own Yjs room; the room
  *   editor shows text fields (EOS / Overlapping / Others).
  * - Room names are editable by hand (✏️ Rename) and shared with everyone.
  * - Refresh (A-B): clear all rooms, rename, show all 3 boxes.
  *   Refresh (C): clear all rooms, rename (same set), show EOS + Others only.
- *   Refresh (D): clear all rooms, rename (D set), show EOS + Others only (2.1.1).
+ *   Refresh (D): clear all rooms, rename (D set), show EOS + Others only.
  * - Admin opens a live, read-only overview of all rooms at once.
- * - Warm ivory palette (2.1.1): #F7F3EA canvas, #FFFDF8 cards.
+ * - 2.1.2: Download lives inside the Admin page; the four main buttons are
+ *   equal-width (grid) and always sit on one line on a phone.
+ * - Warm ivory palette: #F7F3EA canvas, #FFFDF8 cards.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -35,8 +37,6 @@ import {
   disconnectRoom,
   disconnectAll,
   refreshRooms,
-  collectAllContent,
-  downloadAsFile,
   connectMeta,
   writeRefreshTimestamp,
   setRoomName,
@@ -137,7 +137,7 @@ function DutyApp() {
     [activeRoom]
   );
 
-  // ── Refresh family (2.1.1): confirm → clear + rename + set mode ─
+  // ── Refresh family: confirm → clear + rename + set mode ───────
   const runRefresh = useCallback(async (names: string[], mode: RefreshMode, message: string) => {
     if (typeof window === "undefined") return;
     if (!window.confirm(message)) return;
@@ -165,7 +165,7 @@ function DutyApp() {
     [runRefresh]
   );
 
-  // ── Refresh (C): same names as A-B, but only EOS + Others (2.1.1)
+  // ── Refresh (C): same names as A-B, but only EOS + Others
   const handleRefreshC = useCallback(
     () =>
       runRefresh(
@@ -187,18 +187,11 @@ function DutyApp() {
     [runRefresh]
   );
 
-  // ── Download all rooms' content as .txt ───────────────────────
-  const handleDownload = useCallback(async () => {
-    const content = await collectAllContent(ROOM_IDS, roomNames);
-    const date = new Date().toISOString().slice(0, 10);
-    downloadAsFile(`duty-report-${date}.txt`, content);
-  }, [roomNames]);
-
   const activeIndex = Math.max(0, ROOMS.findIndex((r) => r.id === activeRoom));
   const activeName = roomNames[activeIndex] || ROOMS[activeIndex].defaultName;
   const activeSession = session && session.roomId === activeRoom ? session : null;
 
-  // Which boxes to show this shift (2.1.1: C and D modes hide Overlapping)
+  // Which boxes to show this shift (2.1.2: C and D modes hide Overlapping)
   const visibleFields = ROOM_FIELDS.filter((f) => MODE_FIELD_IDS[refreshMode].includes(f.id));
 
   if (!mounted) {
@@ -220,7 +213,7 @@ function DutyApp() {
           <DuckLogo size={48} className="shrink-0" />
           <div className="min-w-0">
             <h1 className="text-xl font-extrabold tracking-tight text-brand-800">
-              Report Duck <span className="text-[0.8em]">2.1.1</span>
+              Report Duck <span className="text-[0.8em]">2.1.2</span>
             </h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="inline-block w-6 h-0.5 bg-gold rounded-full" />
@@ -239,13 +232,13 @@ function DutyApp() {
           </div>
         </div>
 
-        {/* Action buttons — A-B → C → D → Download → Admin (light warm set, 2.1.1)
-            Sized so all five fit on ONE line on an iPhone (393pt): ~344px total. */}
-        <div className="flex flex-wrap items-center gap-0.5 mt-3">
+        {/* Action buttons — A-B → C → D → Admin (2.1.2: four equal-width buttons,
+            always one line on a phone; Download now lives in the Admin page) */}
+        <div className="grid grid-cols-4 gap-0.5 mt-3 max-w-[362px]">
           <button
             onClick={handleRefreshAB}
             disabled={busyRefresh}
-            className="inline-flex items-center px-1.5 py-1 rounded-md text-[10px] font-semibold whitespace-nowrap
+            className="flex items-center justify-center py-1.5 rounded-md text-[11px] font-semibold whitespace-nowrap
                        bg-[#E3EBCB] text-[#4A5D28] border border-[#C4D3A0]
                        hover:bg-[#D8E2BB] active:scale-[0.97] transition-all
                        disabled:opacity-50 disabled:active:scale-100
@@ -256,7 +249,7 @@ function DutyApp() {
           <button
             onClick={handleRefreshC}
             disabled={busyRefresh}
-            className="inline-flex items-center px-1.5 py-1 rounded-md text-[10px] font-semibold whitespace-nowrap
+            className="flex items-center justify-center py-1.5 rounded-md text-[11px] font-semibold whitespace-nowrap
                        bg-[#E9E0EF] text-[#5B4370] border border-[#D1C1DC]
                        hover:bg-[#DFD3E8] active:scale-[0.97] transition-all
                        disabled:opacity-50 disabled:active:scale-100
@@ -267,7 +260,7 @@ function DutyApp() {
           <button
             onClick={handleRefreshD}
             disabled={busyRefresh}
-            className="inline-flex items-center px-1.5 py-1 rounded-md text-[10px] font-semibold whitespace-nowrap
+            className="flex items-center justify-center py-1.5 rounded-md text-[11px] font-semibold whitespace-nowrap
                        bg-[#FFE2C7] text-[#A8430F] border border-[#F2AE7C]
                        hover:bg-[#FFD6B0] active:scale-[0.97] transition-all
                        disabled:opacity-50 disabled:active:scale-100
@@ -276,17 +269,8 @@ function DutyApp() {
             Refresh (D)
           </button>
           <button
-            onClick={handleDownload}
-            className="inline-flex items-center px-1.5 py-1 rounded-md text-[10px] font-semibold whitespace-nowrap
-                       bg-[#DCE7F3] text-[#1E3A5F] border border-[#B3C9E0]
-                       hover:bg-[#CFDEED] active:scale-[0.97] transition-all
-                       focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92AED1]"
-          >
-            Download
-          </button>
-          <button
             onClick={() => setShowAdmin(true)}
-            className="inline-flex items-center px-1.5 py-1 rounded-md text-[10px] font-semibold whitespace-nowrap
+            className="flex items-center justify-center py-1.5 rounded-md text-[11px] font-semibold whitespace-nowrap
                        bg-[#EAE3D6] text-[#574B3C] border border-[#CDBFA9]
                        hover:bg-[#DFD6C4] active:scale-[0.97] transition-all
                        focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9BFAE]"
@@ -317,7 +301,7 @@ function DutyApp() {
 
       {/* Footer */}
       <footer className="mt-auto px-4 py-3 text-center text-[11px] text-[#A79D8D]">
-        Report Duck 2.1.1 · Changes sync in real-time across all devices
+        Report Duck 2.1.2 · Changes sync in real-time across all devices
       </footer>
 
       {/* Admin — live overview of all rooms */}

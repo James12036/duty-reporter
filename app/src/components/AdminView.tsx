@@ -5,13 +5,14 @@
  * Full-screen overlay; updates in real time as officers type.
  * - Text boxes with content are shown; empty boxes are hidden.
  * - Rooms with no content at all are still listed, marked "No content yet".
- * - 📋 Copy All (2.1.1): one click copies everything shown on this page.
+ * - Header actions (2.1.2): 📥 Download｜📋 Copy All｜✕ Close (same style, one row).
+ * - 📋 Copy All: one click copies everything shown on this page.
  * Uses silent observer connections (no presence shown in any room).
- * Warm ivory palette (2.1.1).
+ * Warm ivory palette.
  */
 
 import { useEffect, useState } from "react";
-import { observeRooms } from "@/lib/yjs";
+import { observeRooms, collectAllContent, downloadAsFile } from "@/lib/yjs";
 import { ROOM_FIELDS } from "@/config/rooms";
 
 interface AdminViewProps {
@@ -27,7 +28,7 @@ function buildCopyText(
   contents: Record<string, Record<string, string>>
 ): string {
   const now = new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" });
-  const lines: string[] = [`Report Duck 2.1.1 — Admin copy — ${now}`, "=".repeat(44), ""];
+  const lines: string[] = [`Report Duck 2.1.2 — Admin copy — ${now}`, "=".repeat(44), ""];
 
   roomIds.forEach((id, i) => {
     lines.push(`[${roomNames[i] ?? id}]`);
@@ -52,6 +53,7 @@ function buildCopyText(
 export default function AdminView({ roomIds, roomNames, onClose }: AdminViewProps) {
   const [contents, setContents] = useState<Record<string, Record<string, string>>>({});
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const close = observeRooms(roomIds, setContents);
@@ -88,31 +90,56 @@ export default function AdminView({ roomIds, roomNames, onClose }: AdminViewProp
     }
   };
 
+  // Download all rooms' content as .txt (moved here from the main page in 2.1.2)
+  const handleDownload = async () => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      const content = await collectAllContent(roomIds, roomNames);
+      const date = new Date().toISOString().slice(0, 10);
+      downloadAsFile(`duty-report-${date}.txt`, content);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const headerBtn =
+    "px-3 py-1.5 rounded-md text-xs font-medium transition-all active:scale-[0.97] " +
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9BFAE]";
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#F7F3EA]">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 px-4 py-3 bg-[#FFFDF8] border-b border-[#EAE2D2]">
         <div className="flex items-baseline gap-2 min-w-0">
           <h2 className="text-lg font-extrabold tracking-tight text-brand-800">Admin</h2>
-          <span className="text-[11px] text-[#91887C] truncate">All rooms · live</span>
+          <span className="hidden sm:inline text-[11px] text-[#91887C] truncate">
+            All rooms · live
+          </span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
+            onClick={handleDownload}
+            disabled={downloading}
+            className={`${headerBtn} bg-[#FAF6EC] text-[#7C7263] border border-[#E6DDCB] hover:bg-[#F3EDDF] ${
+              downloading ? "opacity-50" : ""
+            }`}
+          >
+            {downloading ? "📥 Saving…" : "📥 Download"}
+          </button>
+          <button
             onClick={handleCopyAll}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all active:scale-[0.97]
-                        focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9BFAE]
-                        ${copied
-                          ? "bg-[#E3EBCB] text-[#4A5D28] border border-[#C4D3A0]"
-                          : "bg-[#FAF6EC] text-[#7C7263] border border-[#E6DDCB] hover:bg-[#F3EDDF]"}`}
+            className={`${headerBtn} ${
+              copied
+                ? "bg-[#E3EBCB] text-[#4A5D28] border border-[#C4D3A0]"
+                : "bg-[#FAF6EC] text-[#7C7263] border border-[#E6DDCB] hover:bg-[#F3EDDF]"
+            }`}
           >
             {copied ? "✓ Copied" : "📋 Copy All"}
           </button>
           <button
             onClick={onClose}
-            className="px-3 py-1.5 rounded-md text-xs font-medium
-                       bg-[#FAF6EC] text-[#7C7263] border border-[#E6DDCB]
-                       hover:bg-[#F3EDDF] active:scale-[0.97] transition-all
-                       focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9BFAE]"
+            className={`${headerBtn} bg-[#FAF6EC] text-[#7C7263] border border-[#E6DDCB] hover:bg-[#F3EDDF]`}
           >
             ✕ Close
           </button>

@@ -3,7 +3,7 @@
 /**
  * EditorField — the room's Yjs-synced textareas.
  *
- * Which boxes are shown depends on the shift mode (2.1.1):
+ * Which boxes are shown depends on the shift mode (2.1.2):
  *  - Refresh (A-B): EOS / Overlapping / Others (all three).
  *  - Refresh (C) / Refresh (D): EOS / Others (Overlapping hidden).
  *
@@ -15,7 +15,7 @@
  *  - Per-field sizes (and optional label hints) come from ROOM_FIELDS.
  *  - Status row has a fixed height and the remote-typing hint fades in/out via
  *    opacity — no layout shifts while someone else is typing.
- *  - Warm ivory palette (2.1.1): #FAF6EE fields on #FFFDF8 cards.
+ *  - Warm ivory palette (2.1.2): #FAF6EE fields on #FFFDF8 cards.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";

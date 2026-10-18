@@ -1,5 +1,5 @@
 /**
- * Report Duck 2.1.1 — Unified Server
+ * Report Duck 2.1.2 — Unified Server
  *
  * Runs both the Next.js frontend and y-websocket sync server on one port.
  * Deploy to Render, Railway, or Fly.io as a single service.
@@ -74,7 +74,7 @@ app.prepare().then(() => {
   server.listen(PORT, () => {
     console.log(`
 ╔══════════════════════════════════════════════╗
-║   Report Duck 2.1.1 — Ready                 ║
+║   Report Duck 2.1.2 — Ready                 ║
 ║   http://localhost:${PORT}                       ║
 ║   7 rooms × 3 fields + meta active          ║
 ╚══════════════════════════════════════════════╝

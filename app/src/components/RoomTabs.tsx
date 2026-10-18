@@ -3,7 +3,7 @@
 /**
  * RoomTabs — Horizontal scrollable tab bar for the 7 rooms.
  * Labels are the shared, editable room names (fall back to "Room N").
- * Warm ivory palette (2.1.1).
+ * Warm ivory palette (2.1.2).
  */
 
 import { ROOMS } from "@/config/rooms";

@@ -1,6 +1,6 @@
 {
-  "name": "Report Duck 2.1.1",
-  "short_name": "Duck 2.1.1",
+  "name": "Report Duck 2.1.2",
+  "short_name": "Duck 2.1.2",
   "description": "Daily duty result collection with real-time sync",
   "start_url": "/",
   "display": "standalone",

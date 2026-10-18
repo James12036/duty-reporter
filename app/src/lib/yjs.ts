@@ -1,5 +1,5 @@
 /**
- * Yjs + y-websocket integration for Report Duck 2.1.1.
+ * Yjs + y-websocket integration for Report Duck 2.1.2.
  *
  * - One Y.Doc per room ("room-1" … "room-7"); each room holds THREE Y.Text
  *   fields: "eos", "overlapping", "others".
@@ -238,7 +238,7 @@ export async function clearRoomsContent(roomIds: string[]): Promise<void> {
 
 /**
  * Refresh: clear every field of every room, apply the shift's room names to
- * all users, and set the shift mode (2.1.1: A-B shows all 3 boxes; C shows
+ * all users, and set the shift mode (2.1.2: A-B shows all 3 boxes; C shows
  * EOS + Others with the A-B names; D shows EOS + Others with the D names).
  * No template content is written.
  */
@@ -362,7 +362,7 @@ export function collectAllContent(roomIds: string[], labels: string[]): Promise<
     // Build formatted output
     const lines: string[] = [];
     const now = new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" });
-    lines.push(`Report Duck 2.1.1 — ${now}`);
+    lines.push(`Report Duck 2.1.2 — ${now}`);
     lines.push("=".repeat(40));
     lines.push("");
 

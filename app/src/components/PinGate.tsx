@@ -80,7 +80,7 @@ export default function PinGate({ children }: { children: React.ReactNode }) {
             <div className="flex flex-col items-center text-center mb-5">
               <DuckLogo size={96} />
               <h1 className="mt-3 text-xl font-extrabold tracking-tight text-brand-800">
-                Report Duck <span className="text-[0.8em]">2.1.1</span>
+                Report Duck <span className="text-[0.8em]">2.1.2</span>
               </h1>
               <div className="flex items-center gap-2 mt-1">
                 <span className="inline-block w-6 h-0.5 bg-gold rounded-full" />
