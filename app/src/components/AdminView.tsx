@@ -1,12 +1,13 @@
 "use client";
 
 /**
- * Admin view — live, read-only overview of ALL rooms' content (2.1).
+ * Admin view — live, read-only overview of ALL rooms' content (2.1.2).
  * Full-screen overlay; updates in real time as officers type.
  * - Text boxes with content are shown; empty boxes are hidden.
  * - Rooms with no content at all are still listed, marked "No content yet".
- * - Header actions (2.1.2): 📥 Download｜📋 Copy All｜✕ Close (same style, one row).
- * - 📋 Copy All: one click copies everything shown on this page.
+ * - Header actions: 📥 Download｜📋 Copy All｜📋 Copy EOS & Overlapping｜✕ Close.
+ *   Copy All = every field; Copy EOS & Overlapping = only EOS + Overlapping.
+ * - Copy output is plain room blocks — NO heading, time or "=" separator lines.
  * Uses silent observer connections (no presence shown in any room).
  * Warm ivory palette.
  */
@@ -14,6 +15,7 @@
 import { useEffect, useState } from "react";
 import { observeRooms, collectAllContent, downloadAsFile } from "@/lib/yjs";
 import { ROOM_FIELDS } from "@/config/rooms";
+import type { RoomFieldId } from "@/config/rooms";
 
 interface AdminViewProps {
   roomIds: string[];
@@ -21,19 +23,25 @@ interface AdminViewProps {
   onClose: () => void;
 }
 
-/** Format everything visible on the Admin page as plain text. */
+/**
+ * Build plain text for the given fields across all rooms.
+ * Format per room: "[Name]" then "Label:" + content for each non-empty field;
+ * rooms with nothing in the selected fields show "No content yet".
+ * No heading, no timestamp, no "=" separator.
+ */
 function buildCopyText(
   roomIds: string[],
   roomNames: string[],
-  contents: Record<string, Record<string, string>>
+  contents: Record<string, Record<string, string>>,
+  fieldIds: readonly RoomFieldId[]
 ): string {
-  const now = new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" });
-  const lines: string[] = [`Report Duck 2.1.2 — Admin copy — ${now}`, "=".repeat(44), ""];
+  const only = ROOM_FIELDS.filter((f) => fieldIds.includes(f.id));
+  const lines: string[] = [];
 
   roomIds.forEach((id, i) => {
     lines.push(`[${roomNames[i] ?? id}]`);
     const fields = contents[id] ?? {};
-    const nonEmpty = ROOM_FIELDS.filter((f) => (fields[f.id] ?? "").trim() !== "");
+    const nonEmpty = only.filter((f) => (fields[f.id] ?? "").trim() !== "");
 
     if (nonEmpty.length === 0) {
       lines.push("No content yet");
@@ -50,9 +58,34 @@ function buildCopyText(
   return lines.join("\n").trimEnd() + "\n";
 }
 
+/** Copy text to the clipboard (native API, with a legacy fallback). */
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "-1000px";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
+type CopyMode = "all" | "eos";
+
 export default function AdminView({ roomIds, roomNames, onClose }: AdminViewProps) {
   const [contents, setContents] = useState<Record<string, Record<string, string>>>({});
-  const [copied, setCopied] = useState(false);
+  const [copiedMode, setCopiedMode] = useState<CopyMode | null>(null);
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
@@ -60,34 +93,19 @@ export default function AdminView({ roomIds, roomNames, onClose }: AdminViewProp
     return close;
   }, [roomIds]);
 
+  const flashCopied = (mode: CopyMode) => {
+    setCopiedMode(mode);
+    window.setTimeout(() => setCopiedMode(null), 1800);
+  };
+
   const handleCopyAll = async () => {
-    const text = buildCopyText(roomIds, roomNames, contents);
-    let ok = false;
+    const text = buildCopyText(roomIds, roomNames, contents, ["eos", "overlapping", "others"]);
+    if (await copyToClipboard(text)) flashCopied("all");
+  };
 
-    try {
-      await navigator.clipboard.writeText(text);
-      ok = true;
-    } catch {
-      // Fallback for older browsers / restricted contexts
-      try {
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        ta.setAttribute("readonly", "");
-        ta.style.position = "fixed";
-        ta.style.top = "-1000px";
-        document.body.appendChild(ta);
-        ta.select();
-        ok = document.execCommand("copy");
-        document.body.removeChild(ta);
-      } catch {
-        ok = false;
-      }
-    }
-
-    if (ok) {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
-    }
+  const handleCopyEosOverlapping = async () => {
+    const text = buildCopyText(roomIds, roomNames, contents, ["eos", "overlapping"]);
+    if (await copyToClipboard(text)) flashCopied("eos");
   };
 
   // Download all rooms' content as .txt (moved here from the main page in 2.1.2)
@@ -104,43 +122,43 @@ export default function AdminView({ roomIds, roomNames, onClose }: AdminViewProp
   };
 
   const headerBtn =
-    "px-3 py-1.5 rounded-md text-xs font-medium transition-all active:scale-[0.97] " +
-    "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9BFAE]";
+    "inline-flex items-center justify-center h-[30px] w-[68px] rounded-md leading-tight font-medium " +
+    "transition-all active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9BFAE] " +
+    "whitespace-nowrap";
+  const beigeBtn = "bg-[#FAF6EC] text-[#7C7263] border border-[#E6DDCB] hover:bg-[#F3EDDF]";
+  const copiedBtn = "bg-[#E3EBCB] text-[#4A5D28] border border-[#C4D3A0]";
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#F7F3EA]">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2 px-4 py-3 bg-[#FFFDF8] border-b border-[#EAE2D2]">
+      {/* Header — title + actions (actions wrap on narrow phones) */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-[#FFFDF8] border-b border-[#EAE2D2]">
         <div className="flex items-baseline gap-2 min-w-0">
           <h2 className="text-lg font-extrabold tracking-tight text-brand-800">Admin</h2>
           <span className="hidden sm:inline text-[11px] text-[#91887C] truncate">
             All rooms · live
           </span>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center justify-end gap-0.5 ml-auto">
           <button
             onClick={handleDownload}
             disabled={downloading}
-            className={`${headerBtn} bg-[#FAF6EC] text-[#7C7263] border border-[#E6DDCB] hover:bg-[#F3EDDF] ${
-              downloading ? "opacity-50" : ""
-            }`}
+            className={`${headerBtn} text-[10px] ${beigeBtn} ${downloading ? "opacity-50" : ""}`}
           >
             {downloading ? "📥 Saving…" : "📥 Download"}
           </button>
           <button
             onClick={handleCopyAll}
-            className={`${headerBtn} ${
-              copied
-                ? "bg-[#E3EBCB] text-[#4A5D28] border border-[#C4D3A0]"
-                : "bg-[#FAF6EC] text-[#7C7263] border border-[#E6DDCB] hover:bg-[#F3EDDF]"
-            }`}
+            className={`${headerBtn} text-[10px] ${copiedMode === "all" ? copiedBtn : beigeBtn}`}
           >
-            {copied ? "✓ Copied" : "📋 Copy All"}
+            {copiedMode === "all" ? "✓ Copied" : "📋 Copy All"}
           </button>
           <button
-            onClick={onClose}
-            className={`${headerBtn} bg-[#FAF6EC] text-[#7C7263] border border-[#E6DDCB] hover:bg-[#F3EDDF]`}
+            onClick={handleCopyEosOverlapping}
+            className={`${headerBtn} text-[9px] ${copiedMode === "eos" ? copiedBtn : beigeBtn}`}
           >
+            {copiedMode === "eos" ? ("✓ Copied") : (<>Copy EOS &<br />Overlapping</>)}
+          </button>
+          <button onClick={onClose} className={`${headerBtn} text-[10px] ${beigeBtn}`}>
             ✕ Close
           </button>
         </div>

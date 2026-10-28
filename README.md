@@ -4,8 +4,9 @@
 
 ## 2.1.2 改動
 
-1. **Download 掣移入 Admin 頁** — 主頁唔再顯示 Download；Admin 右上角變成一排三個掣：**📥 Download｜📋 Copy All｜✕ Close**（同款設計、同一行）
+1. **Download 掣移入 Admin 頁** — 主頁唔再顯示 Download；Admin 右上角變成一排四個細掣：**📥 Download｜📋 Copy All｜Copy EOS & Overlapping｜✕ Close**（統一 68×30px、同一行、任何手機闊度都放得落）
 2. **主頁四粒掣放大＋統一尺寸** — Refresh (A-B)／(C)／(D)／Admin 改為 grid 四等份（等寬同高），字體同高度略為加大；任何手機闊度都自動平排一行，唔會跌行
+3. **新增「Copy EOS & Overlapping」＋簡化複製格式** — 只複製所有房間嘅 EOS 同 Overlapping（唔包 Others）；所有複製功能都唔再有標題、時間同「＝」分隔線
 
 ## 2.1.1 改動
 
@@ -24,9 +25,10 @@
 3. **Refresh (A-B)** — 清空所有房間，並改名為：MP CW、SUP CW、MP SKW、SUP SKW、SUP SO、Other 1、Other 2（顯示 3 個文字框）
 4. **Refresh (C)** — 同 A-B 名單，但只顯示 EOS + Others 兩個文字框
 5. **Refresh (D)** — 清空所有房間，並改名為：D、D2、D7、H3、Other 1、Other 2、Other 3（只顯示 EOS + Others 兩個文字框）
-6. **Admin** — 一個版面實時睇晒 7 間房（唯讀）：有內容嘅文字框先顯示；無內容嘅房顯示「No content yet」；右上角三個掣：
+6. **Admin** — 一個版面實時睇晒 7 間房（唯讀）：有內容嘅文字框先顯示；無內容嘅房顯示「No content yet」；右上角四個細掣：
    - **📥 Download** — 下載全部房間內容（按 EOS／Overlapping／Others 分段）做 .txt
-   - **📋 Copy All** — 一鍵複製頁面上所有內容
+   - **📋 Copy All** — 一鍵複製全部房間嘅所有內容（冇標題／時間／分隔線）
+   - **Copy EOS & Overlapping** — 只複製 EOS 同 Overlapping（唔包 Others）
    - **✕ Close** — 閂 Admin
 7. **修正打字跳頂問題** — 有其他人同時打字時，唔會再彈返去頂部（改用 diff 式 textarea binding，保留捲軸同游標位置）
 
@@ -62,7 +64,7 @@ NODE_ENV=production PORT=3002 node server.js
 - `app/src/config/rooms.ts` — 房間清單、文字框定義（ROOM_FIELDS + 尺寸 + hint）、MODE_FIELD_IDS（每更顯示邊幾個框）、Refresh 名稱組合
 - `app/src/lib/textarea-binding.ts` — 修正跳頂問題嘅核心（diff 式同步）
 - `app/src/lib/yjs.ts` — Yjs 連線／房間名同步／Refresh（連 shift mode）、Download、Admin 觀察
-- `app/src/components/` — RoomTabs、RoomNameBar、EditorField（按模式顯示文字框）、AdminView（含 Download＋Copy All）、PinGate、DuckLogo
+- `app/src/components/` — RoomTabs、RoomNameBar、EditorField（按模式顯示文字框）、AdminView（含 Download＋兩個 Copy）、PinGate、DuckLogo
 - `app/server.js` — Next.js + y-websocket 單一端口伺服器
 - `app/auth.js` — access code 登入（server-only，唔會出 client bundle）
 - `render.yaml` — Render 部署設定
